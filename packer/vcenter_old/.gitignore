@@ -1,0 +1,41 @@
+# =========================
+# Terraform
+# =========================
+*.tfstate
+*.tfstate.*
+crash.log
+.terraform/
+.terraform.lock.hcl
+
+# =========================
+# Packer
+# =========================
+*.pkrvars.hcl
+!example-variables.pkrvars.hcl
+packer_cache/
+*.log
+
+# =========================
+# Sensitive / secrets
+# =========================
+*.auto.pkrvars.hcl
+*.env
+*.env.*
+secrets.*
+*.key
+*.pem
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# =========================
+# Misc
+# =========================
+*.retry
