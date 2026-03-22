@@ -1,0 +1,14 @@
+---
+- name: Deploy and Configure Linux VM
+  hosts: linux
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+
+  roles:
+    - role: vmware_clone_linux
+    - vmware_resize_disk
+    - manage_users
+    - role: vmware_snapshot
+      vars:
+        snapshot_name: "Post-Deployment Snapshot"

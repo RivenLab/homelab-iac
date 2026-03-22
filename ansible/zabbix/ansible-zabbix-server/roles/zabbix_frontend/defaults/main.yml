@@ -1,0 +1,2 @@
+zabbix_frontend_server_name: "zabbix.example.com"
+zabbix_frontend_port: 80

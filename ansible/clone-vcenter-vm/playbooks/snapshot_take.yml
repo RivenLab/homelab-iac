@@ -1,0 +1,8 @@
+---
+- name: Deploy and Configure Linux VM
+  hosts: linux
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - vmware_snapshot

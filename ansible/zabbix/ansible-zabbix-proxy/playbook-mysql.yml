@@ -1,0 +1,62 @@
+---
+- name: Deploy Zabbix Proxy with MySQL
+  hosts: zabbix_proxy
+  gather_facts: yes
+  become: yes
+  vars:
+    zabbix_db_type: mysql
+
+  pre_tasks:
+    - name: Display MySQL deployment information
+      debug:
+        msg:
+          - "=== Zabbix Proxy Deployment with MySQL ==="
+          - "Database Type: MySQL"
+          - "Proxy Hostname: {{ zabbix_proxy_hostname }}"
+          - "Proxy Mode: {{ 'Active' if zabbix_proxy_mode == 0 else 'Passive' }}"
+          - "Zabbix Server: {{ zabbix_proxy_server }}:{{ zabbix_proxy_server_port }}"
+          - "Database Host: {{ zabbix_db_host }}"
+          - "Database Name: {{ zabbix_db_name }}"
+          - "Database User: {{ zabbix_db_user }}"
+
+    - name: Verify MySQL password is provided
+      fail:
+        msg: "MySQL password must be provided using -e zabbix_db_password='your_password'"
+      when: zabbix_db_password == "" or zabbix_db_password is undefined
+
+  roles:
+    - role: zabbix_proxy
+
+  post_tasks:
+    - name: Verify Zabbix Proxy is running
+      systemd:
+        name: zabbix-proxy
+        state: started
+        enabled: yes
+
+    - name: Check Zabbix Proxy status
+      shell: systemctl status zabbix-proxy
+      register: proxy_status
+      changed_when: false
+
+    - name: Display Proxy status
+      debug:
+        msg: "{{ proxy_status.stdout_lines }}"
+
+    - name: Display next steps for MySQL setup
+      debug:
+        msg:
+          - ""
+          - "=== MySQL Deployment Complete ==="
+          - "Zabbix Proxy with MySQL has been installed and configured successfully!"
+          - ""
+          - "Configuration file: {{ zabbix_proxy_config_file }}"
+          - "Database: {{ zabbix_db_name }}"
+          - "Database User: {{ zabbix_db_user }}"
+          - "Log file: {{ zabbix_proxy_log_file }}"
+          - ""
+          - "Next steps:"
+          - "1. Register this proxy in Zabbix Server UI"
+          - "2. Configure monitored hosts to use this proxy"
+          - "3. Monitor logs: tail -f {{ zabbix_proxy_log_file }}"
+          - "4. Check database: mysql -u{{ zabbix_db_user }} -p{{ zabbix_db_password }} -e 'SHOW TABLES;' {{ zabbix_db_name }}"

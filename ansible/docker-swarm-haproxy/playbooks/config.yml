@@ -1,0 +1,19 @@
+---
+app_domain_name: dragon.local
+portainer_data_path: /mnt/gfs/portainer
+portainer_admin_port: 9000
+portainer_tunnel_port: 8000
+portainer_gfs_subdir: portainer
+portainer_network_name: portainer_agent_network
+portainer_volume_name: portainer_data
+portainer_app_name: portainer
+portainer_admin_password: IXIIOXOO123!
+portainer_agent_secret: mysecrettoken
+traefik_listen_port: 80
+traefik_admin_port: 8080
+traefik_network_name: web
+traefik_app_name: traefik
+traefik_admin_user: admin
+traefik_admin_password: IXIIOXOO123!
+haproxy_stats_user: admin
+haproxy_stats_password: IXIIOXOO123!

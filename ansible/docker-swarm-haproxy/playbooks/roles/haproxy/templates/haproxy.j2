@@ -1,0 +1,71 @@
+global
+  maxconn 50000
+  tune.maxaccept 500
+  log 127.0.0.1 local0
+  log 127.0.0.1 local1 notice
+  chroot /var/lib/haproxy
+  stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+  stats timeout 30s
+  user haproxy
+  group haproxy
+  daemon
+
+  # Default SSL material locations
+  ca-base /etc/ssl/certs
+  crt-base /etc/ssl/private
+
+  # Modern cipher suites for HAProxy 2.8
+  ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+  ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+  ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
+
+defaults
+  log global
+  mode http
+  option dontlognull
+  option forwardfor
+
+  timeout connect 5000
+  timeout client  50000
+  timeout server  50000
+
+  errorfile 400 /etc/haproxy/errors/400.http
+  errorfile 403 /etc/haproxy/errors/403.http
+  errorfile 408 /etc/haproxy/errors/408.http
+  errorfile 500 /etc/haproxy/errors/500.http
+  errorfile 502 /etc/haproxy/errors/502.http
+  errorfile 503 /etc/haproxy/errors/503.http
+  errorfile 504 /etc/haproxy/errors/504.http
+
+  stats enable
+  stats hide-version
+  stats refresh 30s
+  stats show-node
+  stats uri /stats
+  stats realm Haproxy\ Statistics
+  stats auth {{haproxy_stats_user}}:{{haproxy_stats_password}}
+
+frontend http-in
+  bind *:80
+  mode http
+  http-request add-header X-Forwarded-Proto http
+
+  # uncomment to redirect http connects to https
+  #redirect scheme https
+
+  default_backend docker_swarm_layer7
+
+frontend https_in
+  bind *:443 ssl crt /etc/ssl/{{app_domain_name}}/{{app_domain_name}}.pem
+  mode http
+  http-request add-header X-Forwarded-Proto https
+  default_backend docker_swarm_layer7
+
+backend docker_swarm_layer7
+  mode http
+  balance source
+  option tcp-check
+  option log-health-checks
+  server host01 {{groups['swarm_managers'][0]}}:80 check port 80
+  server host02 {{groups['swarm_managers'][1]}}:80 check port 80
+  server host03 {{groups['swarm_managers'][2]}}:80 check port 80

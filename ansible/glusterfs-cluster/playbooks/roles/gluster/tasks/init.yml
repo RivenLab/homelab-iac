@@ -1,0 +1,66 @@
+---
+- name: Check if Gluster volume already exists
+  become: true
+  become_method: sudo
+  shell: gluster volume info {{gluster_volume_name}}
+  register: gluster_volume_check
+  changed_when: false
+  failed_when: false
+
+- name: Check if Gluster volume is initialized
+  stat:
+    path: "{{gluster_volume_path}}/{{inventory_hostname}}/brick"
+  register: glustervolume
+
+- name: Verify Gluster volume path
+  become: true
+  become_method: sudo
+  file:
+    path: "{{gluster_volume_path}}/{{inventory_hostname}}/brick"
+    state: directory
+
+- name: Initialize Gluster Cluster (on first node)
+  when: gluster_volume_check.rc != 0 and inventory_hostname == groups['gluster_nodes'][0]
+  become: true
+  become_method: sudo
+  loop: "{{ groups['gluster_nodes'] }}"
+  shell: gluster peer probe {{ item }}
+  register: peer_probe_result
+  changed_when: "'already in peer list' not in peer_probe_result.stdout"
+  failed_when: false
+
+- name: Create Gluster Volume (on first node)
+  when: gluster_volume_check.rc != 0 and inventory_hostname == groups['gluster_nodes'][0]
+  become: true
+  become_method: sudo
+  shell: >
+    gluster volume create {{gluster_volume_name}} \
+    replica 3 \
+    {{groups['gluster_nodes'][0]}}:{{gluster_volume_path}}/{{groups['gluster_nodes'][0]}}/brick \
+    {{groups['gluster_nodes'][1]}}:{{gluster_volume_path}}/{{groups['gluster_nodes'][1]}}/brick \
+    {{groups['gluster_nodes'][2]}}:{{gluster_volume_path}}/{{groups['gluster_nodes'][2]}}/brick
+
+- name: Secure Gluster Volume (on first node)
+  when: inventory_hostname == groups['gluster_nodes'][0]
+  become: true
+  become_method: sudo
+  shell: >
+    gluster volume set {{gluster_volume_name}} auth.allow  \
+    {{groups['gluster_nodes'][0]}},{{groups['gluster_nodes'][1]}},{{groups['gluster_nodes'][2]}}
+
+- name: Start Gluster Volume (on first node)
+  when: gluster_volume_check.rc != 0 and inventory_hostname == groups['gluster_nodes'][0]
+  become: true
+  become_method: sudo
+  shell: gluster volume start {{gluster_volume_name}}
+
+- name: Wait for Gluster volume to be ready
+  when: gluster_volume_check.rc != 0 and inventory_hostname == groups['gluster_nodes'][0]
+  become: true
+  become_method: sudo
+  shell: gluster volume status {{gluster_volume_name}}
+  retries: 12
+  delay: 5
+  register: result
+  until: result.rc == 0
+  changed_when: false

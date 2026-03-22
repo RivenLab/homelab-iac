@@ -1,0 +1,23 @@
+---
+# Zabbix Version
+zabbix_version: "7.0"
+zabbix_repo_url: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release"
+
+# Proxy Configuration
+zabbix_proxy_hostname: "zabbix-proxy"
+zabbix_proxy_mode: 0  # 0 = Active, 1 = Passive
+zabbix_proxy_server: "10.20.20.180"  # Zabbix Server IP
+zabbix_proxy_server_port: 10051
+
+# Database Configuration - Set in inventory/hosts.yml
+# zabbix_db_type: sqlite  # or mysql
+
+# Proxy Log Settings
+zabbix_proxy_log_file: "/var/log/zabbix/zabbix_proxy.log"
+zabbix_proxy_log_size: 20
+
+# Proxy Performance Settings
+zabbix_proxy_datasender_frequency: 30
+zabbix_proxy_startpollers: 5
+zabbix_proxy_cache_size: 8M
+zabbix_proxy_history_cache_size: 8M

@@ -1,0 +1,44 @@
+---
+- name: Verify Gluster mount path
+  become: true
+  become_method: sudo
+  file:
+    path: "{{gluster_mount_path}}"
+    state: directory
+
+- name: Create systemd override directory
+  become: true
+  become_method: sudo
+  file:
+    path: "/etc/systemd/system/{{ gluster_mount_path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount.d"
+    state: directory
+    mode: '0755'
+
+- name: Add systemd override for glusterfs mount
+  become: true
+  become_method: sudo
+  copy:
+    dest: "/etc/systemd/system/{{ gluster_mount_path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount.d/override.conf"
+    content: |
+      [Unit]
+      After=glusterfs-server.service
+      Wants=glusterfs-server.service
+    mode: '0644'
+  register: systemd_override
+
+- name: Reload systemd daemon
+  become: true
+  become_method: sudo
+  systemd:
+    daemon_reload: yes
+  when: systemd_override.changed
+
+- name: Mount Gluster volume {{gluster_volume_name}} to {{gluster_mount_path}}
+  become: true
+  become_method: sudo
+  mount:
+    path: "{{gluster_mount_path}}"
+    src: "localhost:/{{gluster_volume_name}}"
+    fstype: glusterfs
+    opts: "defaults,_netdev,backup-volfile-servers={{ groups['gluster_nodes'] | difference([inventory_hostname]) | join(':') }}"
+    state: mounted

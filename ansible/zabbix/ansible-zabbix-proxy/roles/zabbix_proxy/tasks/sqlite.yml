@@ -1,0 +1,31 @@
+---
+- name: Install Zabbix Proxy with SQLite3 support
+  apt:
+    name: "{{ zabbix_proxy_packages_sqlite }}"
+    state: present
+  retries: 5
+  delay: 10
+  register: sqlite_install
+  until: sqlite_install is succeeded
+
+- name: Ensure Zabbix SQLite directory exists
+  file:
+    path: "{{ zabbix_db_sqlite_path }}"
+    owner: zabbix
+    group: zabbix
+    mode: '0755'
+    state: directory
+
+- name: Remove empty/broken database file
+  file:
+    path: "{{ zabbix_db_sqlite_path }}/{{ zabbix_db_sqlite_file }}"
+    state: absent
+
+- name: Note on SQLite schema
+  debug:
+    msg:
+      - "SQLite database schema is automatically created by Zabbix on first startup"
+      - "Database location: {{ zabbix_db_sqlite_path }}/{{ zabbix_db_sqlite_file }}"
+      - "No manual schema import needed!"
+
+

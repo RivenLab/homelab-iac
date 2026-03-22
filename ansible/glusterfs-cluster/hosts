@@ -1,0 +1,9 @@
+[gluster_nodes]
+10.10.20.131
+10.10.20.132
+10.10.20.133
+
+[all:vars]
+ansible_connection=ssh
+ansible_user=ansible
+device2_hdd_dev=/dev/sdb

@@ -1,0 +1,49 @@
+---
+- name: Deploy Zabbix Proxy with SQLite (Default)
+  hosts: zabbix_proxy
+  gather_facts: yes
+  become: yes
+
+  pre_tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "=== Zabbix Proxy Deployment ==="
+          - "Selected Database Type: {{ zabbix_db_type | default('sqlite') }}"
+          - "Proxy Hostname: {{ zabbix_proxy_hostname }}"
+          - "Proxy Mode: {{ 'Active' if zabbix_proxy_mode == 0 else 'Passive' }}"
+          - "Zabbix Server: {{ zabbix_proxy_server }}:{{ zabbix_proxy_server_port }}"
+
+  roles:
+    - role: zabbix_proxy
+
+  post_tasks:
+    - name: Verify Zabbix Proxy is running
+      systemd:
+        name: zabbix-proxy
+        state: started
+        enabled: yes
+
+    - name: Check Zabbix Proxy status
+      shell: systemctl status zabbix-proxy
+      register: proxy_status
+      changed_when: false
+
+    - name: Display Proxy status
+      debug:
+        msg: "{{ proxy_status.stdout_lines }}"
+
+    - name: Display next steps
+      debug:
+        msg:
+          - ""
+          - "=== Deployment Complete ==="
+          - "Zabbix Proxy has been installed and configured successfully!"
+          - ""
+          - "Configuration file: {{ zabbix_proxy_config_file }}"
+          - "Log file: {{ zabbix_proxy_log_file }}"
+          - ""
+          - "Next steps:"
+          - "1. Register this proxy in Zabbix Server UI"
+          - "2. Configure monitored hosts to use this proxy"
+          - "3. Monitor logs: tail -f {{ zabbix_proxy_log_file }}"

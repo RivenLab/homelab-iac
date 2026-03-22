@@ -1,0 +1,11 @@
+[haproxy]
+
+[swarm_managers]
+10.10.20.131
+10.10.20.132
+10.10.20.133
+
+[all:vars]
+ansible_connection=ssh
+ansible_user=ansible
+ansible_ssh_private_key_file=

@@ -1,0 +1,38 @@
+---
+- name: Install Zabbix frontend + PHP 8.3 Ubuntu 24.04
+  ansible.builtin.apt:
+    name:
+      - zabbix-frontend-php
+      - zabbix-nginx-conf
+      - php8.3-pgsql
+    state: present
+    update_cache: yes
+  become: true
+  retries: 5
+  delay: 10
+  register: frontend_install
+  until: frontend_install is succeeded
+
+- name: Nginx Zabbix conf
+  ansible.builtin.template:
+    src: zabbix_nginx.conf.j2
+    dest: /etc/nginx/conf.d/zabbix.conf
+  become: true
+  notify: Restart nginx
+
+- name: Remove default Nginx
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: true
+  notify: Restart nginx
+
+- name: Start services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - php8.3-fpm
+    - nginx
+  become: true

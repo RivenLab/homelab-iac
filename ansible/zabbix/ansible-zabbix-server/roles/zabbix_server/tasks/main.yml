@@ -1,0 +1,179 @@
+---
+- name: Install base prerequisites
+  ansible.builtin.apt:
+    name:
+      - wget
+      - gnupg
+      - curl
+      - ca-certificates
+      - python3-psycopg2
+      - apt-transport-https
+      - lsb-release
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Create PostgreSQL keyring directory
+  ansible.builtin.file:
+    path: /usr/share/postgresql-common/pgdg
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Import PostgreSQL repository signing key
+  ansible.builtin.shell: curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+  become: true
+  changed_when: false
+
+- name: Add PostgreSQL repository
+  ansible.builtin.shell: |
+    echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+  become: true
+  changed_when: false
+
+- name: Update package lists
+  ansible.builtin.apt:
+    update_cache: yes
+  become: true
+
+- name: Install PostgreSQL 18
+  ansible.builtin.apt:
+    name:
+      - postgresql-18
+      - postgresql-contrib-18
+      - postgresql-common
+    state: present
+  become: true
+
+- name: Add TimescaleDB repository
+  ansible.builtin.shell: echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main" | sudo tee /etc/apt/sources.list.d/timescaledb.list
+  become: true
+  when: zabbix_enable_timescaledb
+  changed_when: false
+
+- name: Import TimescaleDB GPG key
+  ansible.builtin.shell: wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/timescaledb.gpg
+  become: true
+  when: zabbix_enable_timescaledb
+  changed_when: false
+
+- name: Install TimescaleDB
+  ansible.builtin.apt:
+    name:
+      - timescaledb-2-postgresql-18
+      - postgresql-client-18
+    state: present
+    update_cache: yes
+  become: true
+  when: zabbix_enable_timescaledb
+
+- name: Run TimescaleDB tuning wizard
+  ansible.builtin.shell: timescaledb-tune --quiet --yes
+  become: true
+  when: zabbix_enable_timescaledb
+  changed_when: false
+
+- name: Restart PostgreSQL to apply TimescaleDB tunings
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
+  become: true
+  when: zabbix_enable_timescaledb
+
+- name: Install Zabbix repo
+  block:
+    - name: Download repo
+      ansible.builtin.get_url:
+        url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest+ubuntu24.04_all.deb
+        dest: /tmp/zabbix-release.deb
+        mode: "0644"
+      retries: 5
+      delay: 10
+      register: repo_download
+      until: repo_download is succeeded
+      failed_when: false
+
+    - name: Install repo
+      ansible.builtin.apt:
+        deb: /tmp/zabbix-release.deb
+      when: repo_download.changed
+
+
+- name: Install Zabbix Serve
+  ansible.builtin.apt:
+    name:
+      - zabbix-server-pgsql
+      - zabbix-sql-scripts
+    state: present
+    update_cache: yes
+  become: true
+  retries: 5
+  delay: 10
+  register: server_install
+  until: server_install is succeeded
+
+- name: Ensure PostgreSQL running
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+    enabled: true
+  become: true
+
+- name: Ensure pg_hba autorise zabbix md5
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/18/main/pg_hba.conf
+    line: 'local   all             zabbix                                  md5'
+    insertafter: '^local\s+all\s+postgres'
+  become: true
+  notify: Reload PostgreSQL
+
+- name: Create Zabbix user
+  ansible.builtin.shell: |
+    sudo -u postgres psql -c "CREATE USER {{ zabbix_db_user }} PASSWORD '{{ zabbix_db_password }}' CREATEDB SUPERUSER;"
+  become: true
+  register: create_user
+  failed_when: false
+  changed_when: "'already exists' not in create_user.stderr"
+  no_log: true
+
+- name: Create Zabbix DB
+  ansible.builtin.shell: sudo -u postgres createdb -O {{ zabbix_db_user }} {{ zabbix_db_name }}
+  become: true
+  register: create_db
+  failed_when: false
+  changed_when: "'createdb: database' not in create_db.stderr"
+
+- name: Import schema
+  ansible.builtin.shell: |
+    zcat /usr/share/zabbix-sql-scripts/postgresql/server.sql.gz | sudo -u postgres psql {{ zabbix_db_name }}
+  become: true
+  async: 300
+  poll: 30
+  register: schema_import
+  failed_when: false
+
+- name: Enable TimescaleDB extension
+  ansible.builtin.shell: |
+    sudo -u postgres psql {{ zabbix_db_name }} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+  become: true
+  when: zabbix_enable_timescaledb
+  register: timescaledb_ext
+  failed_when: false
+  changed_when: "'already exists' not in timescaledb_ext.stderr"
+
+- name: Deploy Zabbix Server config
+  ansible.builtin.template:
+    src: zabbix_server.conf.j2
+    dest: /etc/zabbix/zabbix_server.conf
+    owner: root
+    group: zabbix
+    mode: "0640"
+  become: true
+  notify: Restart zabbix-server
+
+- name: Enable/start Zabbix Server
+  ansible.builtin.systemd:
+    name: zabbix-server
+    state: started
+    enabled: true
+  become: true

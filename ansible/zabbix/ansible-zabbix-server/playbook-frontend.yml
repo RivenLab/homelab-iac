@@ -1,0 +1,6 @@
+---
+- name: Deploy Zabbix Frontend Only
+  hosts: zabbix_server
+  become: true
+  roles:
+    - zabbix_frontend

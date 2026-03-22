@@ -1,0 +1,27 @@
+# Zabbix Server configuration - managed by Ansible
+LogFile=/var/log/zabbix/zabbix_server.log
+LogFileSize=0
+PidFile=/run/zabbix/zabbix_server.pid
+SocketDir=/run/zabbix
+
+DBHost=
+DBName={{ zabbix_db_name }}
+DBUser={{ zabbix_db_user }}
+DBPassword={{ zabbix_db_password }}
+
+ListenPort={{ zabbix_server_listen_port }}
+
+StartPollers={{ zabbix_start_pollers }}
+StartPreprocessors={{ zabbix_start_preprocessors }}
+StartTrappers={{ zabbix_start_trappers }}
+CacheSize={{ zabbix_cache_size }}
+HistoryCacheSize={{ zabbix_history_cache_size }}
+ValueCacheSize={{ zabbix_value_cache_size }}
+TrendCacheSize={{ zabbix_trend_cache_size }}
+
+HousekeepingFrequency={{ zabbix_housekeeping_frequency }}
+MaxHousekeeperDelete={{ zabbix_max_housekeeper_delete }}
+
+Timeout=10
+AlertScriptsPath=/usr/lib/zabbix/alertscripts
+ExternalScripts=/usr/lib/zabbix/externalscripts

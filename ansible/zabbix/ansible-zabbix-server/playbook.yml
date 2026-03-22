@@ -1,0 +1,8 @@
+---
+- name: Deploy Zabbix Server + Frontend
+  hosts: zabbix_server
+  become: true
+  roles:
+    - zabbix_server
+    - zabbix_agent
+    - zabbix_frontend

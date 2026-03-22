@@ -1,0 +1,17 @@
+---
+- name: Restart zabbix-proxy
+  systemd:
+    name: zabbix-proxy
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+
+- name: Reload zabbix-proxy
+  systemd:
+    name: zabbix-proxy
+    state: reloaded
+
+- name: Enable zabbix-proxy
+  systemd:
+    name: zabbix-proxy
+    enabled: yes

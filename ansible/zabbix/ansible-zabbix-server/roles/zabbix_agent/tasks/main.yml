@@ -1,0 +1,30 @@
+---
+- name: Install Zabbix Agent 2
+  ansible.builtin.apt:
+    name:
+      - zabbix-agent2
+      - zabbix-agent2-plugin-postgresql
+    state: present
+    update_cache: yes
+  become: true
+  retries: 5
+  delay: 10
+  register: agent_install
+  until: agent_install is succeeded
+
+- name: Deploy Zabbix Agent configuration
+  ansible.builtin.template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agent2.conf
+    owner: zabbix
+    group: zabbix
+    mode: "0640"
+  become: true
+  notify: Restart zabbix-agent2
+
+- name: Enable and start Zabbix Agent
+  ansible.builtin.systemd:
+    name: zabbix-agent2
+    state: started
+    enabled: true
+  become: true

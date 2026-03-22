@@ -1,0 +1,42 @@
+---
+# Default variables for Zabbix Proxy role
+
+# Zabbix Proxy Configuration
+zabbix_proxy_hostname: "zabbix-proxy"
+zabbix_proxy_mode: 0  # 0 = Active, 1 = Passive
+zabbix_proxy_server: "192.168.1.50"
+zabbix_proxy_server_port: 10051
+
+# Database Type (can be overridden in inventory)
+zabbix_db_type: "sqlite"
+
+# SQLite Configuration
+zabbix_db_sqlite_path: "/var/lib/zabbix"
+zabbix_db_sqlite_file: "proxy.db"
+
+# MySQL Configuration (when zabbix_db_type: mysql)
+zabbix_db_user: "zabbix"
+zabbix_db_password: ""
+zabbix_db_name: "zabbix_proxy"
+zabbix_db_host: "localhost"
+zabbix_db_port: 3306
+
+# Log Settings
+zabbix_proxy_log_file: "/var/log/zabbix/zabbix_proxy.log"
+zabbix_proxy_log_size: 20
+
+# Performance Settings
+zabbix_proxy_datasender_frequency: 30
+zabbix_proxy_startpollers: 5
+zabbix_proxy_cache_size: "8M"
+zabbix_proxy_history_cache_size: "8M"
+
+# Memory Buffer Settings (Zabbix 7.0+)
+zabbix_proxy_buffer_mode: "hybrid"
+zabbix_proxy_memory_buffer_size: "16M"
+zabbix_proxy_memory_buffer_age: 3600
+
+# Repository Settings
+zabbix_repo_url: "https://repo.zabbix.com/zabbix"
+zabbix_version: "7.0"
+ubuntu_version: "24.04"

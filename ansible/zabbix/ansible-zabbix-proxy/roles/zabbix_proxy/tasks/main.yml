@@ -1,0 +1,62 @@
+---
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install prerequisite packages
+  apt:
+    name:
+      - wget
+      - gnupg2
+    state: present
+
+- name: Download Zabbix repository package
+  get_url:
+    url: "{{ zabbix_repo_download_url }}"
+    dest: "/tmp/{{ zabbix_repo_package }}"
+    mode: '0644'
+  retries: 5
+  delay: 10
+  register: download_result
+  until: download_result is succeeded
+
+- name: Install Zabbix repository
+  apt:
+    deb: "/tmp/{{ zabbix_repo_package }}"
+
+- name: Update package cache after adding repo
+  apt:
+    update_cache: yes
+
+- name: Install Zabbix Proxy (SQLite)
+  include_tasks: sqlite.yml
+  when: zabbix_db_type | lower == "sqlite"
+
+- name: Install Zabbix Proxy (MySQL)
+  include_tasks: mysql.yml
+  when: zabbix_db_type | lower == "mysql"
+
+- name: Configure Zabbix Proxy
+  template:
+    src: zabbix_proxy.conf.j2
+    dest: "{{ zabbix_proxy_config_file }}"
+    owner: zabbix
+    group: zabbix
+    mode: '0640'
+    backup: yes
+  notify: Restart zabbix-proxy
+
+- name: Ensure zabbix-proxy is started and enabled
+  systemd:
+    name: zabbix-proxy
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for zabbix-proxy to be ready
+  wait_for:
+    port: 10051
+    delay: 2
+    timeout: 30
+  ignore_errors: yes

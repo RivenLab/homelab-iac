@@ -1,0 +1,4 @@
+.vagrant
+*.log
+hosts-local
+.DS_Store

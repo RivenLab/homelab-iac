@@ -1,0 +1,18 @@
+---
+# Zabbix Proxy role variables
+
+# Zabbix Repo Package
+zabbix_repo_package: "zabbix-release_latest_{{ zabbix_version }}+ubuntu{{ ubuntu_version }}_all.deb"
+zabbix_repo_download_url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
+
+# Package names based on database type
+zabbix_proxy_packages_sqlite:
+  - zabbix-proxy-sqlite3
+
+zabbix_proxy_packages_mysql:
+  - zabbix-proxy-mysql
+  - zabbix-sql-scripts
+  - mysql-client
+
+# Configuration files
+zabbix_proxy_config_file: "/etc/zabbix/zabbix_proxy.conf"

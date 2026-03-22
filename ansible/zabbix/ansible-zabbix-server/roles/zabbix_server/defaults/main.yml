@@ -1,0 +1,20 @@
+zabbix_version: "7.0"
+zabbix_server_listen_port: 10051
+
+zabbix_db_type: "postgresql"
+zabbix_db_host: "localhost"
+zabbix_db_name: "zabbix"
+zabbix_db_user: "zabbix"
+zabbix_db_password: "zabbix123"
+zabbix_enable_timescaledb: true
+
+zabbix_start_pollers: 10
+zabbix_start_preprocessors: 5
+zabbix_start_trappers: 5
+zabbix_cache_size: "128M"
+zabbix_history_cache_size: "64M"
+zabbix_value_cache_size: "64M"
+zabbix_trend_cache_size: "32M"
+
+zabbix_housekeeping_frequency: 1
+zabbix_max_housekeeper_delete: 5000

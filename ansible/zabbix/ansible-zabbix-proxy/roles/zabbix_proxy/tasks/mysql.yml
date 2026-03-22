@@ -1,0 +1,86 @@
+---
+- name: Install Zabbix Proxy with MySQL support
+  apt:
+    name: "{{ zabbix_proxy_packages_mysql }}"
+    state: present
+  retries: 5
+  delay: 10
+  register: mysql_install
+  until: mysql_install is succeeded
+
+- name: Ensure MySQL Server is installed and running
+  apt:
+    name:
+      - mysql-server
+    state: present
+  when: zabbix_db_host == "localhost"
+
+- name: Start MySQL service
+  systemd:
+    name: mysql
+    state: started
+    enabled: yes
+  when: zabbix_db_host == "localhost"
+
+- name: Create Zabbix Proxy database
+  mysql_db:
+    login_user: root
+    login_password: "{{ mysql_root_password | default('') }}"
+    name: "{{ zabbix_db_name }}"
+    state: present
+    encoding: utf8mb4
+    collation: utf8mb4_bin
+  when: zabbix_db_host == "localhost"
+  register: proxy_db_created
+
+- name: Create Zabbix Proxy database user
+  mysql_user:
+    login_user: root
+    login_password: "{{ mysql_root_password | default('') }}"
+    name: "{{ zabbix_db_user }}"
+    host: "{{ zabbix_db_host }}"
+    password: "{{ zabbix_db_password }}"
+    state: present
+  when: zabbix_db_host == "localhost"
+
+- name: Grant privileges to Zabbix Proxy database user
+  mysql_user:
+    login_user: root
+    login_password: "{{ mysql_root_password | default('') }}"
+    name: "{{ zabbix_db_user }}"
+    host: "{{ zabbix_db_host }}"
+    priv: "{{ zabbix_db_name }}.*:ALL"
+    state: present
+  when: zabbix_db_host == "localhost"
+
+- name: Enable log_bin_trust_function_creators
+  mysql_query:
+    login_user: root
+    login_password: "{{ mysql_root_password | default('') }}"
+    query: "SET GLOBAL log_bin_trust_function_creators = 1"
+  when: zabbix_db_host == "localhost"
+  ignore_errors: yes
+
+- name: Import Zabbix Proxy database schema
+  shell: |
+    cat /usr/share/zabbix-sql-scripts/mysql/proxy.sql | mysql --default-character-set=utf8mb4 -u{{ zabbix_db_user }} -p{{ zabbix_db_password }} {{ zabbix_db_name }}
+  when: zabbix_db_host == "localhost" and proxy_db_created is changed
+  register: schema_import
+  ignore_errors: yes
+
+- name: Disable log_bin_trust_function_creators
+  mysql_query:
+    login_user: root
+    login_password: "{{ mysql_root_password | default('') }}"
+    query: "SET GLOBAL log_bin_trust_function_creators = 0"
+  when: zabbix_db_host == "localhost"
+  ignore_errors: yes
+
+- name: Display MySQL setup information
+  debug:
+    msg:
+      - "Zabbix Proxy with MySQL has been configured successfully"
+      - "Database: {{ zabbix_db_name }}"
+      - "Database User: {{ zabbix_db_user }}"
+      - "Database Host: {{ zabbix_db_host }}"
+      - "Database imported: {{ schema_import.rc | default('N/A') }}"

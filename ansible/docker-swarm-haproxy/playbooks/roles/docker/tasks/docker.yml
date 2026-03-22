@@ -1,0 +1,82 @@
+---
+- name: Install Docker Python library
+  become: true
+  become_method: sudo
+  apt:
+    name: python3-docker
+    state: present
+    update_cache: yes
+
+
+- name: Remove old versions of Docker
+  become: true
+  become_method: sudo
+  apt:
+    state: absent
+    pkg:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    force_apt_get: true
+
+- name: Create keyrings directory
+  become: yes
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Docker GPG key
+  become: yes
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+
+- name: Add Docker repository
+  become: yes
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    filename: docker
+    state: present
+    update_cache: yes
+
+- name: Install Docker
+  become: true
+  become_method: sudo
+  apt:
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    force_apt_get: true
+    update_cache: yes
+
+- name: Add "{{ansible_user}}" user to "docker" group
+  become: true
+  become_method: sudo
+  shell: "usermod -aG docker {{ansible_user}}"
+
+- name: Waiting for Docker service to become available
+  wait_for:
+    path: /var/run/docker.sock
+
+- name: Reboot host(s) after Docker install
+  shell: sleep 2 && /sbin/shutdown -r now "ansible reboot request"
+  async: 1
+  poll: 0
+  ignore_errors: true
+  become: true
+  become_method: sudo
+  when: inventory_hostname != "127.0.0.1" and inventory_hostname != "localhost"
+
+- name: Waiting for host(s) to reboot
+  local_action: "wait_for host={{inventory_hostname}} port=22 state=started delay=60"
+  become: false
+  ignore_errors: true
+  when: inventory_hostname != "127.0.0.1" and inventory_hostname != "localhost"
