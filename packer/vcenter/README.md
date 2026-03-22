@@ -1,7 +1,5 @@
 <!-- markdownlint-disable first-line-h1 no-inline-html -->
 
-<img src="docs/assets/images/icon-color.svg" alt="VMware vSphere" width="150">
-
 ## Linux Distributions
 
 | Operating System             | Version   |
