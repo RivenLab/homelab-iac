@@ -5,7 +5,11 @@
 10.10.20.132
 10.10.20.133
 
+[swarm_workers]
+10.20.20.134
+10.20.20.135
+
 [all:vars]
 ansible_connection=ssh
 ansible_user=ansible
-ansible_ssh_private_key_file=
+ansible_ssh_private_key_file=/home/dragon/.ssh/ansible_id_ed25519
