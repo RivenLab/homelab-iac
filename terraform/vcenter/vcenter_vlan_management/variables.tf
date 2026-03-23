@@ -50,6 +50,23 @@ variable "virtual_switch_name" {
   default = "vSwitch0"
 }
 
+variable "network_type" {
+  type        = string
+  description = "Type of port group: 'standard' or 'distributed'"
+  default     = "standard"
+
+  validation {
+    condition     = contains(["standard", "distributed"], var.network_type)
+    error_message = "The network_type must be either 'standard' or 'distributed'."
+  }
+}
+
+variable "distributed_virtual_switch_name" {
+  type        = string
+  description = "Name of the distributed virtual switch to use"
+  default     = "DSwitch"
+}
+
 variable "vlans" {
   type = map(number)
   description = "Map of VLAN names to VLAN IDs"

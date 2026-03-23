@@ -19,6 +19,13 @@ provider "vsphere" {
 
 
 
+data "vsphere_distributed_virtual_switch" "dvs" {
+  for_each = var.network_type == "distributed" ? toset(var.datacenters) : toset([])
+
+  name          = var.distributed_virtual_switch_name
+  datacenter_id = data.vsphere_datacenter.datacenters[each.key].id
+}
+
 data "vsphere_datacenter" "datacenters" {
   for_each = toset(var.datacenters)
   name     = each.key

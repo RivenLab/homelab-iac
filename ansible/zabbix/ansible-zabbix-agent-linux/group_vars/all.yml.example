@@ -1,0 +1,63 @@
+---
+# ============================================================
+# Zabbix Agent 2 + Zabbix Host Registration Defaults
+# ============================================================
+
+# -----------------------------
+# Zabbix Agent - Identity / Checks
+# -----------------------------
+zabbix_agent_hostname: "{{ ansible_facts['hostname'] }}"
+zabbix_agent_server_active: ""
+zabbix_agent_server_active_port: 10051
+
+# Optional: set only if you use passive checks too
+# zabbix_agent_server: "10.20.20.180"
+
+zabbix_agent_listen_port: 10050
+
+# -----------------------------
+# Zabbix Agent - Runtime / Logs
+# -----------------------------
+zabbix_agent_log_file: "/var/log/zabbix/zabbix_agent2.log"
+zabbix_agent_log_file_size: 0 # 0 = unlimited
+zabbix_agent_pid_file: "/run/zabbix/zabbix_agent2.pid"
+zabbix_agent_plugin_socket: "/run/zabbix/agent.plugin.sock"
+zabbix_agent_control_socket: "/run/zabbix/agent.sock"
+
+# -----------------------------
+# Zabbix Agent - TLS / PSK
+# -----------------------------
+zabbix_agent_tls_mode: "psk" # unencrypted | psk | cert
+zabbix_agent_tls_connect: "{{ zabbix_agent_tls_mode }}"
+zabbix_agent_tls_accept: "{{ zabbix_agent_tls_mode }}"
+zabbix_agent_tls_psk_identity: "{{ inventory_hostname }}"
+zabbix_agent_tls_psk_file: "{{ zabbix_agent_config_file | dirname }}/zabbix_agent2.psk"
+
+# Stored on Ansible controller, one persistent PSK per host
+zabbix_agent_psk_store_dir: "{{ playbook_dir }}/.secrets/zabbix_agent_psk"
+
+# Rotate only when explicitly requested (-e zabbix_agent_rotate_psk=true)
+zabbix_agent_rotate_psk: false
+
+# -----------------------------
+# Zabbix API Connection
+# -----------------------------
+zabbix_api_host: ""
+zabbix_api_port: 443
+zabbix_api_use_ssl: true
+zabbix_api_validate_certs: false
+zabbix_api_url_path: ""
+zabbix_api_key: ""
+
+# -----------------------------
+# Zabbix Host Registration
+# -----------------------------
+zabbix_registration_host_name: "{{ zabbix_agent_hostname | default(inventory_hostname) }}"
+zabbix_registration_host_group: "Linux servers"
+zabbix_registration_template: "Linux by Zabbix agent active"
+
+# PSK-only encryption in Zabbix frontend/API
+zabbix_registration_tls_connect: 2
+zabbix_registration_tls_accept: 2
+zabbix_registration_tls_psk_identity: "{{ zabbix_agent_tls_psk_identity | default(inventory_hostname) }}"
+zabbix_registration_tls_psk: "{{ zabbix_agent_psk_value | default('') }}"
