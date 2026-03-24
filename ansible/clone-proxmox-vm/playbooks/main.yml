@@ -1,0 +1,6 @@
+---
+- name: Deploy and Configure Linux VM
+  gather_facts: false
+
+  roles:
+    - role: proxmox_clone_linux

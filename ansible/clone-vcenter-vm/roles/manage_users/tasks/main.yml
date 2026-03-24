@@ -42,7 +42,6 @@
     shell: /bin/bash
     groups: "{{ 'wheel' if ansible_facts['os_family'] == 'RedHat' else 'sudo' }}"
     password: "{{ (linux_user_password | default('r')) | password_hash('sha512') }}"
-    update_password: on_create
     state: present
     create_home: yes
   when: user_check.ansible_facts.getent_passwd is not defined
