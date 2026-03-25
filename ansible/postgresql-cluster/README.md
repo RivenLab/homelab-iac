@@ -2,7 +2,8 @@
 
 This repository was designed to deploy a PostgreSQL cluster with 2 nodes only.
 It provides an automated setup using Ansible to simplify installation, configuration, and management.
-Inspiration
+
+## Inspiration
 
 This project was inspired by the following repository:
 https://github.com/rom8726/ansible-patroni-ssl/tree/main
