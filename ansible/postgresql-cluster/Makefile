@@ -39,15 +39,15 @@ check: ## Check cluster status
 
 test-vip: ## Test VIP connections with SSL
 	@echo "Copying VIP-compatible certificates..."
-	./scripts/copy_certificates_vip.sh -s patroni1 -v 10.20.20.60 -d ./certs
+	./scripts/copy_certificates_vip.sh -s cluster-db-1 -v 10.20.20.60 -d ./certs
 	@echo "Testing VIP connections..."
 	./scripts/test_vip_connections.sh -v 10.20.20.60 -c ./certs
 
 copy-vip-certs: ## Copy VIP-compatible certificates
-	./scripts/copy_certificates_vip.sh -s patroni1 -v 10.20.20.60 -d ./certs
+	./scripts/copy_certificates_vip.sh -s cluster-db-1 -v 10.20.20.60 -d ./certs
 
 check-certs: ## Check if certificates include VIP in SAN
-	./scripts/check_certificates_vip.sh -s patroni1 -v 10.20.20.60
+	./scripts/check_certificates_vip.sh -s cluster-db-1 -v 10.20.20.60
 
 clean-certs: ## Clean and regenerate certificates
 	ansible-playbook -i inventory.ini playbook.yml --tags certificates -e 'clean_certificates=true'

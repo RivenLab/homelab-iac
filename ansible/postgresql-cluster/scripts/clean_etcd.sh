@@ -7,7 +7,7 @@ set -e
 
 if [ $# -eq 0 ]; then
     echo "Usage: $0 <host1> <host2>"
-    echo "Example: $0 patroni1 patroni2"
+    echo "Example: $0 cluster-db-1 cluster-db-2"
     exit 1
 fi
 

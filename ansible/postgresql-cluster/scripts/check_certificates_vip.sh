@@ -42,7 +42,7 @@ show_usage() {
     echo "  -s, --source HOST       Source host to check (required)"
     echo ""
     echo "Examples:"
-    echo "  $0 -s patroni1 -v 10.20.20.60"
+    echo "  $0 -s cluster-db-1 -v 10.20.20.60"
     echo ""
 }
 

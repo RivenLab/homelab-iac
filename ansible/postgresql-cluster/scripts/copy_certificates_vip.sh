@@ -49,8 +49,8 @@ show_usage() {
     echo "  -d, --dest DIR          Destination directory (default: ./certs)"
     echo ""
     echo "Examples:"
-    echo "  $0 -s patroni1 -v 10.20.20.60"
-    echo "  $0 -s patroni1 -d ~/my_certs -p 5432 -n 9443"
+    echo "  $0 -s cluster-db-1 -v 10.20.20.60"
+    echo "  $0 -s cluster-db-1 -d ~/my_certs -p 5432 -n 9443"
     echo ""
 }
 
