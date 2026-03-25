@@ -1,0 +1,74 @@
+---
+# handlers/main.yml for Patroni role
+
+# Handler to reload systemd daemon
+- name: reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  tags: always
+
+
+# Handler to restart Patroni service
+- name: restart patroni
+  ansible.builtin.systemd:
+    name: patroni
+    state: restarted
+    enabled: true
+  register: patroni_restart
+  tags: patroni
+
+
+# Handler to reload Patroni service (for configuration changes)
+- name: reload patroni
+  ansible.builtin.systemd:
+    name: patroni
+    state: reloaded
+    enabled: true
+  when: patroni_restart is not changed
+  register: patroni_reload
+  tags: patroni
+
+
+# Handler to reload PostgreSQL configuration
+- name: reload postgres
+  ansible.builtin.systemd:
+    name: postgresql
+    state: reloaded
+  failed_when: false
+  tags: postgresql
+
+
+# Handler to wait for Patroni to be ready after restart
+- name: wait for patroni ready
+  ansible.builtin.wait_for:
+    port: "{{ postgresql_port | default(5432) }}"
+    host: "{{ ansible_host }}"
+    delay: 10
+    timeout: 60
+  tags: patroni
+
+
+# Handler to display pending restart parameters
+- name: check pending restart params
+  become: true
+  community.postgresql.postgresql_query:
+    login_host: "127.0.0.1"
+    login_port: "{{ postgresql_port | default(5432) }}"
+    login_user: "{{ postgresql_superuser_name }}"
+    login_password: "{{ postgresql_superuser_password }}"
+    query: "SELECT name FROM pg_settings WHERE pending_restart IS TRUE"
+  register: pending_restart_params
+  failed_when: false
+  tags: postgresql
+
+
+# Handler to display pending restart alert
+- name: alert pending restart required
+  ansible.builtin.debug:
+    msg: |
+      WARNING: Parameters pending restart detected on {{ inventory_hostname }}:
+      {{ pending_restart_params.query_result | map(attribute='name') | list | to_nice_yaml }}
+  when:
+    - pending_restart_params.query_result is defined
+    - pending_restart_params.query_result | length > 0
+  tags: postgresql

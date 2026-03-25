@@ -1,0 +1,166 @@
+---
+- name: Install etcd
+  ansible.builtin.apt:
+    name:
+      - etcd-server
+      - etcd-client
+    update_cache: true
+
+
+- name: Create etcd user with no shell
+  ansible.builtin.user:
+    name: etcd
+    system: yes
+    shell: /bin/false
+    home: /var/lib/etcd
+    create_home: no
+    group: etcd
+    state: present
+
+
+- name: Create etcd directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: etcd
+    group: etcd
+  loop:
+    - /etc/etcd
+    - /var/lib/etcd
+
+
+- name: Clean etcd data if requested
+  block:
+    - name: Remove etcd data directory
+      ansible.builtin.file:
+        path: /var/lib/etcd
+        state: absent
+
+    - name: Recreate etcd data directory
+      ansible.builtin.file:
+        path: /var/lib/etcd
+        state: directory
+        mode: '0700'
+        owner: etcd
+        group: etcd
+  when: etcd_clean_data | default(false) | bool
+
+
+- name: Clean invalid files from previous installations
+  ansible.builtin.shell: |
+    rm -f /var/lib/etcd/.bash_logout
+    rm -f /var/lib/etcd/.bashrc
+    rm -f /var/lib/etcd/.profile
+    rm -rf /var/lib/etcd/default
+  changed_when: false
+  tags: etcd, etcd_clean
+
+
+- name: Fix etcd TLS certificate permissions
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: etcd
+    group: etcd
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /etc/etcd/tls/server.crt, mode: '0644' }
+    - { path: /etc/etcd/tls/server.key, mode: '0600' }
+    - { path: /etc/etcd/tls/ca.crt, mode: '0644' }
+    - { path: /etc/etcd/tls/ca.key, mode: '0600' }
+  when: etcd_tls_enabled | default(true) | bool
+  tags: etcd, etcd_tls
+
+
+- name: Configure etcd
+  ansible.builtin.template:
+    src: etcd.conf.j2
+    dest: /etc/etcd/etcd.conf
+    mode: '0644'
+    owner: etcd
+    group: etcd
+    backup: yes
+  register: etcd_config_change
+
+
+- name: Deploy etcd systemd service
+  ansible.builtin.template:
+    src: etcd.service.j2
+    dest: /etc/systemd/system/etcd.service
+    mode: '0644'
+    owner: root
+    group: root
+    backup: yes
+  register: etcd_service_change
+
+
+- name: Reload systemd and restart etcd if changed
+  block:
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Restart etcd service
+      ansible.builtin.systemd:
+        name: etcd
+        state: restarted
+        enabled: true
+
+    - name: Wait for etcd to be ready
+      ansible.builtin.wait_for:
+        port: 2379
+        host: "{{ ansible_host }}"
+        delay: 2
+        timeout: 30
+
+    - name: Wait for etcd cluster stability
+      ansible.builtin.shell: |
+        for i in {1..10}; do
+          etcdctl --endpoints=https://{{ ansible_host }}:2379 \
+            --cacert=/etc/etcd/tls/ca.crt \
+            --cert=/etc/etcd/tls/server.crt \
+            --key=/etc/etcd/tls/server.key \
+            endpoint health && break
+          sleep 1
+        done
+      environment:
+        ETCDCTL_API: 3
+      changed_when: false
+      when: etcd_tls_enabled | default(true) | bool
+
+  when: etcd_config_change.changed or etcd_service_change.changed
+
+
+- name: Start etcd if not running
+  ansible.builtin.systemd:
+    name: etcd
+    state: started
+    enabled: true
+  when: not (etcd_config_change.changed or etcd_service_change.changed)
+
+
+- name: Verify etcd cluster health
+  ansible.builtin.shell: |
+    etcdctl --endpoints=https://{{ ansible_host }}:2379 \
+      --cacert=/etc/etcd/tls/ca.crt \
+      --cert=/etc/etcd/tls/server.crt \
+      --key=/etc/etcd/tls/server.key \
+      endpoint health && \
+    etcdctl --endpoints=https://{{ ansible_host }}:2379 \
+      --cacert=/etc/etcd/tls/ca.crt \
+      --cert=/etc/etcd/tls/server.crt \
+      --key=/etc/etcd/tls/server.key \
+      member list
+  environment:
+    ETCDCTL_API: 3
+  register: etcd_status
+  changed_when: false
+  failed_when: etcd_status.rc != 0
+  when: etcd_tls_enabled | default(true) | bool
+
+
+- name: Display etcd status
+  ansible.builtin.debug:
+    msg: |
+      etcd cluster health and members:
+      {{ etcd_status.stdout }}

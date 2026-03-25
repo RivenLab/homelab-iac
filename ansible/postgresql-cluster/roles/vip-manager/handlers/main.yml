@@ -1,0 +1,7 @@
+---
+- name: restart vip-manager
+  ansible.builtin.systemd:
+    name: vip-manager
+    state: restarted
+    daemon_reload: yes
+  tags: vip, vip_manager

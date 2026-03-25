@@ -1,0 +1,142 @@
+- block: # install vip-manager package from GitHub releases
+    - name: Download vip-manager package from GitHub releases
+      ansible.builtin.get_url:
+        url: "{{ vip_manager_github_release_url }}"
+        dest: /tmp/
+        timeout: 60
+        validate_certs: false
+      environment: "{{ proxy_env | default({}) }}"
+
+    - name: Install vip-manager from downloaded package (Debian)
+      ansible.builtin.apt:
+        force_apt_get: true
+        deb: "/tmp/{{ vip_manager_github_release_url | basename }}"
+        state: present
+      register: apt_status
+      until: apt_status is success
+      delay: 5
+      retries: 3
+      when: ansible_os_family == "Debian"
+
+    - name: Install vip-manager from downloaded package (RedHat)
+      ansible.builtin.package:
+        name: "/tmp/{{ vip_manager_github_release_url | basename }}"
+        state: present
+        disable_gpg_check: true
+      register: package_status
+      until: package_status is success
+      delay: 5
+      retries: 3
+      when: ansible_os_family == "RedHat"
+
+  when:
+    - vip_manager_github_release_url is defined
+    - vip_manager_github_release_url | length > 0
+    - not ansible_check_mode
+    - not postgresql_cluster_maintenance | default(false) | bool
+  tags: vip, vip_manager, vip_manager_install
+
+
+- name: Make sure the conf directory exists
+  ansible.builtin.file:
+    dest: "{{ vip_manager_conf | dirname }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0755'
+  tags: vip, vip_manager, vip_manager_conf
+
+
+- name: Generate vip-manager configuration file
+  ansible.builtin.template:
+    src: vip-manager.yml.j2
+    dest: "{{ vip_manager_conf }}"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: "restart vip-manager"
+  when: cluster_scaling is not defined or not cluster_scaling | bool
+  tags: vip, vip_manager, vip_manager_conf
+
+
+- block: # if cluster_scaling (add_node.yml)
+    - name: Fetch vip-manager configuration from master
+      run_once: true
+      ansible.builtin.fetch:
+        src: "{{ vip_manager_conf }}"
+        dest: "{{ files_dir | default(playbook_dir ~ '/files') }}/{{ vip_manager_conf | basename }}"
+        validate_checksum: true
+        flat: true
+      delegate_to: "{{ groups['postgres_cluster_hosts'][0] }}"
+
+    - name: Copy vip-manager configuration to replica
+      ansible.builtin.copy:
+        src: "{{ files_dir | default(playbook_dir ~ '/files') }}/{{ vip_manager_conf | basename }}"
+        dest: "{{ vip_manager_conf | dirname }}"
+      notify: "restart vip-manager"
+
+    - name: Update vip-manager configuration for this node
+      ansible.builtin.lineinfile:
+        path: "{{ vip_manager_conf }}"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        backrefs: true
+      loop:
+        - { regexp: "^nodename:", line: 'nodename: "{{ ansible_hostname }}"' }
+        - { regexp: "^iface:", line: "iface: {{ vip_manager_interface }} # interface to which the virtual ip will be added" }
+      loop_control:
+        label: "{{ item.line }}"
+      notify: "restart vip-manager"
+
+  when: cluster_scaling is defined and cluster_scaling | bool
+  tags: vip, vip_manager, vip_manager_conf
+
+
+- name: Generate vip-manager systemd service file
+  ansible.builtin.template:
+    src: vip-manager.service.j2
+    dest: /etc/systemd/system/vip-manager.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: "restart vip-manager"
+  tags: vip, vip_manager, vip_manager_service
+
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  tags: vip, vip_manager, vip_manager_service
+
+
+- name: Enable vip-manager service
+  ansible.builtin.systemd:
+    name: vip-manager
+    enabled: yes
+  tags: vip, vip_manager, vip_manager_service
+
+
+- name: Start vip-manager service
+  ansible.builtin.systemd:
+    name: vip-manager
+    state: started
+  tags: vip, vip_manager, vip_manager_service
+
+
+- name: Wait for vip-manager to stabilize
+  ansible.builtin.pause:
+    seconds: 3
+  tags: vip, vip_manager, vip_manager_service
+
+
+- name: Verify vip-manager service status
+  ansible.builtin.systemd:
+    name: vip-manager
+  register: vip_service_status
+  failed_when: vip_service_status.status.ActiveState != 'active'
+  tags: vip, vip_manager, vip_manager_service
+
+
+- name: Flush handlers immediately
+  ansible.builtin.meta: flush_handlers
+  tags: vip, vip_manager

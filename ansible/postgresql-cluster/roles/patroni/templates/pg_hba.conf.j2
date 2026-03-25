@@ -1,0 +1,39 @@
+# PostgreSQL Client Authentication Configuration File
+# TYPE      DATABASE        USER                ADDRESS              METHOD
+
+# Local connections - postgres and pgbouncer (if used)
+local       all             postgres                                 peer
+{% if pgbouncer_enabled | default(false) %}
+local       all             pgbouncer                                peer
+{% endif %}
+local       all             all                                      scram-sha-256
+
+# IPv4 localhost connections
+host        all             all             127.0.0.1/32             scram-sha-256
+
+# IPv6 localhost connections
+host        all             all             ::1/128                  scram-sha-256
+
+# Replication connections from localhost
+local       replication     {{ postgresql_replication_user }}                        peer
+host        replication     {{ postgresql_replication_user }} 127.0.0.1/32         scram-sha-256
+host        replication     {{ postgresql_replication_user }} ::1/128              scram-sha-256
+
+# Replication connections from cluster nodes (SSL required)
+{% for host in groups['postgres_cluster_hosts'] | default([]) %}
+hostssl     replication     {{ postgresql_replication_user }} {{ hostvars[host]['ansible_host'] }}/32 {{ postgresql_replication_auth_method }}
+{% endfor %}
+
+# Application connections from cluster nodes (SSL required)
+{% for host in groups['postgres_cluster_hosts'] | default([]) %}
+hostssl     all             all             {{ hostvars[host]['ansible_host'] }}/32 {{ postgresql_replication_auth_method }}
+{% endfor %}
+
+# Connections from external networks (if defined)
+{% for network in external_networks | default([]) %}
+hostssl     all             all             {{ network }}            {{ postgresql_replication_auth_method }}
+{% endfor %}
+
+# Reject all other network connections
+host        all             all             0.0.0.0/0                reject
+host        all             all             ::/0                     reject

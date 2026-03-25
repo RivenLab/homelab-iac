@@ -1,0 +1,27 @@
+---
+# Main playbook for Patroni PostgreSQL cluster with SSL support
+
+# Play 1: Prepare system
+- name: Prepare system for provisioning
+  hosts: postgres_cluster_hosts
+  become: true
+  roles:
+    - { role: system-prep, tags: [system-prep, always] }
+
+# Play 2: Deploy core components
+- name: Deploy core cluster components
+  hosts: postgres_cluster_hosts
+  become: true
+  roles:
+    - { role: certificates, tags: [certificates, ssl] }
+    - { role: etcd, tags: [etcd, etcd] }
+    - { role: postgresql, tags: [postgresql, postgresql] }
+    - { role: patroni, tags: [patroni, patroni] }
+
+# Play 3: Deploy load balancing and HA components
+- name: Deploy load balancing and HA components
+  hosts: postgres_cluster_hosts
+  become: true
+  roles:
+    # - { role: pgbouncer, tags: [pgbouncer, connection-pool] }
+    - { role: vip-manager, tags: [vip-manager, ha] }

@@ -1,0 +1,11 @@
+[defaults]
+host_key_checking = False
+private_key_file = /home/dragon/.ssh/ansible_id_ed25519
+python_interpreter = /usr/bin/python3
+ansible_user = ansible
+
+[privilege_escalation]
+become = True
+become_method = sudo
+become_user = root
+become_ask_pass = False

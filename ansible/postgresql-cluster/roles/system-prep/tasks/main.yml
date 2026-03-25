@@ -1,0 +1,41 @@
+---
+- name: Check if unattended-upgrades is installed
+  ansible.builtin.stat:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+  register: unattended_upgrades_config
+
+- name: Disable unattended-upgrades during provisioning
+  ansible.builtin.replace:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+    regexp: 'APT::Periodic::Update-Package-Lists "1";'
+    replace: 'APT::Periodic::Update-Package-Lists "0";'
+  when: unattended_upgrades_config.stat.exists and system_prep_disable_unattended_upgrades
+  notify: enable unattended-upgrades
+
+- name: Stop unattended-upgrades service
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    state: stopped
+    enabled: false
+  ignore_errors: yes
+  when: system_prep_disable_unattended_upgrades
+  notify: start unattended-upgrades
+
+- name: Wait for dpkg lock to be released
+  ansible.builtin.shell: |
+    counter=0
+    while fuser /var/lib/dpkg/lock* >/dev/null 2>&1 && [ $counter -lt {{ system_prep_wait_timeout // 2 }} ]; do
+      echo "Waiting for apt lock... ($counter/{{ system_prep_wait_timeout // 2 }})"
+      sleep 2
+      counter=$((counter + 1))
+    done
+    if [ $counter -eq {{ system_prep_wait_timeout // 2 }} ]; then
+      echo "Warning: apt lock not released after {{ system_prep_wait_timeout }} seconds, continuing anyway..."
+    fi
+  changed_when: false
+  timeout: "{{ system_prep_wait_timeout }}"
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 0

@@ -1,0 +1,112 @@
+# Common versions
+arch: "linux-amd64"
+prometheus_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+
+# Common Patroni settings
+patroni_scope: postgres-cluster
+patroni_api_port: 8008
+patroni_api_ssl_port: 8443
+patroni_ttl: 30
+patroni_loop_wait: 10
+patroni_retry_timeout: 10
+patroni_max_lag: 1048576
+patroni_use_pg_rewind: true
+patroni_use_slots: true
+patroni_config: "/etc/patroni/patroni.yml"
+# Patroni API settings
+patroni_api_password: "6EXuCAmHZf0lbSrnSv1fkipUbloxO1Uu"
+patroni_api_username: patroni
+
+# etcd settings
+etcd_client_port: 2379
+etcd_host: "{{ groups['postgres_cluster_hosts'][0] }}"
+clean_etcd: false
+etcd_cluster_formation: true
+etcd_clean_data: false
+# etcd TLS settings for vip-manager
+etcd_tls_enabled: true
+etcd_ca_file: "/etc/patroni/certs/etcd-ca.crt"
+etcd_cert_file: "/etc/patroni/certs/etcd-client.crt"
+etcd_key_file: "/etc/patroni/certs/etcd-client.key"
+
+# PostgreSQL settings
+clean_postgresql: false
+postgresql_clean_data: false
+
+
+# PostgreSQL settings
+postgresql_version: 17
+postgresql_encoding: UTF8
+postgresql_port: 5432
+postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+postgresql_bin_dir: "/usr/lib/postgresql/{{ postgresql_version }}/bin"
+postgresql_config_dir: /etc/postgresql/{{ postgresql_version }}/main
+
+
+# SSL/TLS settings
+postgres_ssl_ca_cert: "/etc/postgresql/certs/root.crt"
+postgres_ssl_server_cert: "/etc/postgresql/certs/server.crt"
+postgres_ssl_server_key: "/etc/postgresql/certs/server.key"
+postgres_ssl_client_cert_dir: "/home/postgres/certs"
+postgres_ssl_patroni_client_cert_dir: "/home/postgres/patroni-certs"
+postgresql_ssl_min_protocol: "TLSv1.2"
+postgresql_ssl_prefer_server_ciphers: "on"
+clean_certificates: false
+# Patroni API/REST TLS settings
+patroni_api_cert: "/etc/patroni/certs/patroni.crt"
+patroni_api_key: "/etc/patroni/certs/patroni.key"
+patroni_ca_cert: "/etc/patroni/certs/root.crt"
+
+
+
+
+
+# PostgreSQL users
+postgresql_superuser_name: postgres
+postgresql_superuser_password: 7syAQ7Nmh6qiS1z5ZG1TKb8VG7ltyEyr
+postgresql_replication_user: replicator
+postgresql_replication_password: 0wimOPV5MfV6qWf8IzK7V5s8zEXuIR5U
+postgresql_replication_auth_method: scram-sha-256
+
+# PostgreSQL params
+postgresql_max_connections: 100
+postgresql_shared_buffers: 256MB
+postgresql_effective_cache_size: 768MB
+postgresql_wal_level: logical # Changed from 'replica' to 'logical' for Patroni
+postgresql_shared_preload_libraries: "pg_stat_statements, auto_explain"
+
+
+# Additional PostgreSQL params (optional)
+postgresql_custom_parameters:
+  max_worker_processes: 8
+  max_wal_senders: 20
+  wal_keep_size: 1GB
+  max_replication_slots: 20
+  hot_standby: "on"
+  hot_standby_feedback: "on"
+
+
+# Additional pg_hba.conf rules (optional)
+postgresql_additional_pg_hba: []
+
+
+# PgBouncer params
+pgbouncer_listen_port: 6432
+
+
+# vip-manager settings
+vip_manager_github_release_url: "https://github.com/cybertec-postgresql/vip-manager/releases/download/v4.0.0/vip-manager_4.0.0_Linux_x86_64.deb"
+vip_manager_conf: "/etc/patroni/vip-manager.yml"
+vip_manager_vip: 10.20.20.50
+vip_manager_netmask: 24
+vip_manager_interface: ens192
+vip_manager_interval: 1000                    # Check interval (milliseconds)
+vip_manager_trigger_key: "/service/postgres-cluster/leader"
+vip_manager_retry_num: 2                      # Retry attempts
+vip_manager_retry_after: 250                  # Retry delay (milliseconds)
+vip_manager_verbose: false                    # Enable verbose logging
+
+external_networks :
+  - 10.20.20.0/24
+  - 10.10.10.0/24

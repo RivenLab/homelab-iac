@@ -1,0 +1,14 @@
+---
+- name: enable unattended-upgrades
+  ansible.builtin.replace:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+    regexp: 'APT::Periodic::Update-Package-Lists "0";'
+    replace: 'APT::Periodic::Update-Package-Lists "1";'
+  ignore_errors: yes
+
+- name: start unattended-upgrades
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    state: started
+    enabled: true
+  ignore_errors: yes

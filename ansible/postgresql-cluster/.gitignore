@@ -1,0 +1,7 @@
+.vscode/
+.idea/
+.ansible/
+ansible.cfg
+inventory.ini
+tmp/
+certs/

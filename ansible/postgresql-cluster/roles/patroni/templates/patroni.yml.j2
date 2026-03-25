@@ -1,0 +1,213 @@
+---
+
+scope: "{{ patroni_scope }}"
+namespace: /service
+name: "{{ inventory_hostname }}"
+
+log:
+  level: WARNING
+  traceback_level: ERROR
+  format: '%(asctime)s %(levelname)s: %(message)s'
+  dateformat: ''
+  max_queue_size: 1000
+  dir: /var/log/patroni
+  file_num: 4
+  file_size: 25000000
+  loggers:
+    patroni.postmaster: WARNING
+    urllib3: WARNING
+
+restapi:
+  listen: 0.0.0.0:{{ patroni_api_port }}
+  connect_address: {{ ansible_host }}:{{ patroni_api_port }}
+  certfile: {{ patroni_api_cert }}
+  keyfile: {{ patroni_api_key }}
+  cafile: {{ patroni_ca_cert }}
+  authentication:
+    username: {{ patroni_api_username }}
+    password: "{{ patroni_api_password }}"
+  request_queue_size: 5
+
+etcd3:
+  hosts:
+{% for host in groups['postgres_cluster_hosts'] %}
+    - {{ hostvars[host]['ansible_host'] }}:{{ etcd_client_port }}
+{% endfor %}
+  protocol: https
+  cacert: {{ etcd_ca_file }}
+  cert: {{ etcd_cert_file }}
+  key: {{ etcd_key_file }}
+
+bootstrap:
+  method: initdb
+  dcs:
+    ttl: {{ patroni_ttl }}
+    loop_wait: {{ patroni_loop_wait }}
+    retry_timeout: {{ patroni_retry_timeout }}
+    maximum_lag_on_failover: {{ patroni_max_lag }}
+    master_start_timeout: 300
+    synchronous_mode: false
+    synchronous_mode_strict: false
+    synchronous_node_count: 1
+    postgresql:
+      use_pg_rewind: {{ patroni_use_pg_rewind | lower }}
+      use_slots: {{ patroni_use_slots | lower }}
+      parameters:
+        max_connections: "{{ postgresql_max_connections }}"
+        superuser_reserved_connections: "5"
+        password_encryption: "scram-sha-256"
+        ssl: "on"
+        ssl_prefer_server_ciphers: "{{ postgresql_ssl_prefer_server_ciphers }}"
+        ssl_cert_file: "{{ postgres_ssl_server_cert }}"
+        ssl_key_file: "{{ postgres_ssl_server_key }}"
+        ssl_ca_file: "{{ postgres_ssl_ca_cert }}"
+        ssl_min_protocol_version: "{{ postgresql_ssl_min_protocol }}"
+        max_locks_per_transaction: "512"
+        max_prepared_transactions: "0"
+        huge_pages: "try"
+        work_mem: "64MB"
+        maintenance_work_mem: "512MB"
+        checkpoint_timeout: "15min"
+        checkpoint_completion_target: "0.9"
+        min_wal_size: "1GB"
+        max_wal_size: "8GB"
+        wal_buffers: "32MB"
+        wal_level: "{{ postgresql_wal_level }}"
+        wal_keep_size: "1GB"
+        wal_log_hints: "on"
+        wal_compression: "on"
+        bgwriter_delay: "20"
+        bgwriter_lru_maxpages: "1000"
+        default_statistics_target: "1000"
+        seq_page_cost: "1"
+        random_page_cost: "1.1"
+        effective_io_concurrency: "200"
+        synchronous_commit: "on"
+        autovacuum: "on"
+        autovacuum_max_workers: "5"
+        autovacuum_analyze_scale_factor: "0.01"
+        autovacuum_vacuum_scale_factor: "0.01"
+        autovacuum_vacuum_insert_scale_factor: "0.1"
+        autovacuum_vacuum_cost_limit: "500"
+        autovacuum_vacuum_cost_delay: "2"
+        autovacuum_naptime: "1s"
+        archive_mode: "on"
+        archive_timeout: "1800s"
+        archive_command: "cd ."
+        max_wal_senders: "20"
+        max_replication_slots: "20"
+        hot_standby: "on"
+        hot_standby_feedback: "on"
+        max_standby_streaming_delay: "30s"
+        wal_receiver_status_interval: "10s"
+        shared_preload_libraries: "{{ postgresql_shared_preload_libraries }}"
+        pg_stat_statements.max: "10000"
+        pg_stat_statements.track: "all"
+        pg_stat_statements.track_planning: "true"
+        pg_stat_statements.track_utility: "false"
+        pg_stat_statements.save: "true"
+        auto_explain.log_min_duration: "10s"
+        auto_explain.log_analyze: "true"
+        auto_explain.log_buffers: "true"
+        auto_explain.log_timing: "false"
+        auto_explain.log_triggers: "true"
+        auto_explain.log_verbose: "true"
+        auto_explain.log_nested_statements: "true"
+        auto_explain.sample_rate: "0.01"
+        track_io_timing: "on"
+        track_activities: "on"
+        track_activity_query_size: "4096"
+        track_counts: "on"
+        track_functions: "all"
+        log_lock_waits: "on"
+        log_temp_files: "0"
+        log_checkpoints: "on"
+        log_rotation_age: "1d"
+        log_rotation_size: "0"
+        log_line_prefix: "%t [%p-%l] %r %q%u@%d "
+        log_filename: "postgresql-%a.log"
+        log_directory: "/var/log/postgresql"
+        log_truncate_on_rotation: "on"
+        logging_collector: "on"
+        jit: "off"
+        max_files_per_process: "4096"
+        max_worker_processes: "16"
+        max_parallel_workers: "8"
+        max_parallel_workers_per_gather: "2"
+        max_parallel_maintenance_workers: "2"
+        tcp_keepalives_count: "10"
+        tcp_keepalives_idle: "300"
+        tcp_keepalives_interval: "30"
+        idle_in_transaction_session_timeout: "10min"
+
+  initdb:
+    - encoding: UTF8
+    - locale: en_US.UTF-8
+    - data-checksums
+
+  pg_hba:
+    # Local connections
+    - local       all             postgres                                 peer
+    - local       all             all                                      scram-sha-256
+
+    # IPv4/IPv6 localhost
+    - host        all             all                 127.0.0.1/32         scram-sha-256
+    - host        all             all                 ::1/128              scram-sha-256
+
+    # Replication from localhost and cluster
+    - host        replication     {{ postgresql_replication_user }} 127.0.0.1/32 scram-sha-256
+{% for host in groups['postgres_cluster_hosts'] %}
+    - hostssl     replication     {{ postgresql_replication_user }} {{ hostvars[host]['ansible_host'] }}/32 scram-sha-256
+{% endfor %}
+
+    # Replication from VIP
+    - hostssl     replication     {{ postgresql_replication_user }} {{ vip_manager_vip }}/32 scram-sha-256
+
+    # Reject all others
+    - host        all             all                 0.0.0.0/0            reject
+    - host        all             all                 ::/0                 reject
+
+postgresql:
+  listen: 0.0.0.0:{{ postgresql_port }}
+  connect_address: "{{ ansible_host }}:{{ postgresql_port }}"
+  use_unix_socket: true
+  use_unix_socket_repl: true
+  data_dir: "{{ postgresql_data_dir }}"
+  bin_dir: "{{ postgresql_bin_dir }}"
+  config_dir: "{{ postgresql_config_dir }}"
+  pgpass: /var/lib/postgresql/.pgpass_patroni
+  authentication:
+    replication:
+      username: {{ postgresql_replication_user }}
+      password: "{{ postgresql_replication_password }}"
+      sslmode: require
+      sslrootcert: "{{ postgres_ssl_ca_cert }}"
+    superuser:
+      username: {{ postgresql_superuser_name }}
+      password: "{{ postgresql_superuser_password }}"
+      sslmode: require
+      sslrootcert: "{{ postgres_ssl_ca_cert }}"
+  parameters:
+    unix_socket_directories: /var/run/postgresql
+    shared_buffers: "{{ postgresql_shared_buffers }}"
+    effective_cache_size: "{{ postgresql_effective_cache_size }}"
+
+  remove_data_directory_on_rewind_failure: false
+  remove_data_directory_on_diverged_timelines: false
+
+  create_replica_methods:
+    - basebackup
+  basebackup:
+    max-rate: '1000M'
+    checkpoint: 'fast'
+
+watchdog:
+  mode: automatic
+  device: /dev/watchdog
+  safety_margin: 5
+
+tags:
+  nosync: false
+  noloadbalance: false
+  nofailover: false
+  clonefrom: false
