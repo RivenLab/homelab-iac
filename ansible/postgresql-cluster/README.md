@@ -11,9 +11,9 @@ https://github.com/rom8726/ansible-patroni-ssl/tree/main
 
 ### Notes
 
-The setup supports exactly two nodes or plus
-Adjust configurations as needed for your environment
-Tested only on Ubuntu 24.04
+- The setup supports exactly two nodes or plus
+- Adjust configurations as needed for your environment
+- Tested only on Ubuntu 24.04
 
 
 
