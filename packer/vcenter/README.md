@@ -8,8 +8,6 @@
 |                              | 12        |
 | Ubuntu Server                | 24.04 LTS |
 | Red Hat Enterprise Linux     | 9         |
-| AlmaLinux OS                 | 9         |
-| Rocky Linux                  | 9         |
 
 ## Microsoft Windows
 

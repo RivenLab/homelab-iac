@@ -1,2 +1,0 @@
-network --device=ens192 --bootproto=dhcp
-
