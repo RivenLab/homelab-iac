@@ -33,9 +33,9 @@
         - "{{ dns1 }}"
         - "{{ dns2 }}"
     wait_for_ip_address: true
-    wait_for_ip_address_timeout: 120
-    wait_for_customization: true
-    wait_for_customization_timeout: 120
+    wait_for_ip_address_timeout: 60
+    wait_for_customization: True
+    wait_for_customization_timeout: 60
   delegate_to: localhost
 
 

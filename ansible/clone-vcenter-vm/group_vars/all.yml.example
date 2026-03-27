@@ -42,3 +42,9 @@ dns1: "10.10.20.1"
 dns2: "1.1.1.1"
 vm_folder: "/"
 
+
+####################
+###### Windows #####
+####################
+windows_new_password: "PASS"
+windows_timezone: 65

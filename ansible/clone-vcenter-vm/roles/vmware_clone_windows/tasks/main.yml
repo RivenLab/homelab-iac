@@ -32,8 +32,11 @@
       dns_servers:
         - "{{ dns1 }}"
         - "{{ dns2 }}"
-      timezone: "{{ timezone }}"
-      password: "{{ new_password }}"
-    wait_for_customization: yes
-    wait_for_ip_address: True
+      timezone: "{{ windows_timezone }}"
+      password: "{{ windows_new_password }}"
+    wait_for_ip_address: true
+    wait_for_ip_address_timeout: 120
+    wait_for_customization: True
+    wait_for_customization_timeout: 120
   delegate_to: localhost
+
