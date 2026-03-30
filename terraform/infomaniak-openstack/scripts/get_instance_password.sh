@@ -59,4 +59,4 @@ KEY_PATH=${KEY_PATH:-~/.ssh/id_rsa}
 
 # 4. Retrieve and decrypt the password
 echo "Retrieving password..."
-openstack server password show --private-key "$KEY_PATH" "$INSTANCE_ID"
+nova get-password "$INSTANCE_ID" "$KEY_PATH"
