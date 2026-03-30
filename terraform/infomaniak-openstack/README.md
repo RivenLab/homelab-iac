@@ -4,7 +4,8 @@
 - openstack
 - nova cli
 ```
-
+---
+# 1 Installation
 ## Install OpenStack CLI
 ```bash
 pipx install python-openstackclient
@@ -13,19 +14,21 @@ pipx install python-openstackclient
 ```bash
 pipx install python-novaclient
 ```
-
+---
+# 2 Load environment variables
 ## Source openrc.sh file
 ```bash
-source openrc.sh
+source load_env/openrc.sh
 ```
 
-### Retrieve OPNsense password
+## Load Source s3-env.sh
 ```bash
-bash scripts/get_opensense_password.sh
+source load_env/s3-env.sh
 ```
 
+---
+# 3 Run Terraform commands
 ## Terraform commands
-
 ### 1. Init
 ```bash
 terraform init
@@ -49,4 +52,10 @@ terraform output
 ### 5. To Destroy
 ```bash
 terraform destroy -auto-approve
+```
+
+---
+# 4 Retrieve OPNsense password
+```bash
+bash scripts/get_instance_password.sh
 ```
