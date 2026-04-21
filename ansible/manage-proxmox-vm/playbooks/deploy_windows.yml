@@ -1,0 +1,9 @@
+---
+- name: Deploy and Configure Windows VM
+  hosts: windows
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - proxmox_clone_windows
+    - proxmox_snapshot

@@ -1,0 +1,5 @@
+---
+proxmox_host: "10.10.10.102:8006"
+proxmox_node: "prx-cloud"
+proxmox_api_user: "root@pam"
+proxmox_api_password: ""

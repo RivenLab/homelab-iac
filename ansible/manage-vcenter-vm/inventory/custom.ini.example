@@ -1,0 +1,18 @@
+#     #                                        #     #
+#     # # #####  ##### #    #   ##   #         ##   ##   ##    ####  #    # # #    # ######  ####
+#     # # #    #   #   #    #  #  #  #         # # # #  #  #  #    # #    # # ##   # #      #
+#     # # #    #   #   #    # #    # #         #  #  # #    # #      ###### # # #  # #####   ####
+ #   #  # #####    #   #    # ###### #         #     # ###### #      #    # # #  # # #           #
+  # #   # #   #    #   #    # #    # #         #     # #    # #    # #    # # #   ## #      #    #
+   #    # #    #   #    ####  #    # ######    #     # #    #  ####  #    # # #    # ######  ####
+
+[windows]
+; 172.16.0.56 guest_hostname='2022SERVER01' guest_vcpu='2' guest_vram='4096' template_name='windows-server-2022-datacenter-dexp-v23.01' vm_guestid='windows9Server64Guest'
+; 172.16.0.51 guest_hostname='LT-2022SERVER02' guest_vcpu='2' guest_vram='4096' template_name='windows-server-2022-datacenter-core-v23.01' vm_guestid='windows9Server64Guest'
+
+[linux]
+;10.10.20.30 guest_hostname='ubuntu-test-02' guest_vcpu='1' guest_vram='2048' template_name='linux-ubuntu-24.04' vm_guestid='ubuntu64Guest'
+10.10.20.29 guest_hostname=rhel9-test-01 guest_vcpu=2 guest_vram=2048 template_name=linux-rhel-9.7 vm_guestid=rhel8_64Guest linux_disk_size=50
+
+[linux:vars]
+ansible_python_interpreter=/usr/bin/python3

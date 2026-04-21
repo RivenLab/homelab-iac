@@ -35,10 +35,10 @@ resource "proxmox_virtual_environment_vm" "debian_vm" {
   }
 
   network_device {
-    bridge      = var.network_bridge
-    model       = var.network_model
-    firewall    = var.network_firewall
-    vlan_id     = var.network_vlan_id
+    bridge   = var.network_bridge
+    model    = var.network_model
+    firewall = var.network_firewall
+    vlan_id  = var.network_vlan_id
   }
 
   initialization {
@@ -66,15 +66,14 @@ resource "proxmox_virtual_environment_vm" "debian_vm" {
 
   provisioner "remote-exec" {
     connection {
-      type     = "ssh"
-      user     = "dragon"
-      private_key = "${file("~/.ssh/id_ed25519")}"
-      host     = split("/", var.ip_address)[0]
-  }
+      type        = "ssh"
+      user        = "dragon"
+      private_key = file("~/.ssh/id_ed25519")
+      host        = split("/", var.ip_address)[0]
+    }
     inline = [
       "sleep 10",
       "ROOT_DISK=$(lsblk -no PKNAME,MOUNTPOINT | grep '/$' | awk '{print $1}' | sed 's/[0-9]*$//')",
-      "par=$()",
       "sudo growpart /dev/$ROOT_DISK 2",
       "sudo growpart /dev/$ROOT_DISK 5",
       "sudo pvresize /dev/$${ROOT_DISK}5",
