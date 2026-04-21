@@ -47,13 +47,14 @@ d-i apt-setup/cdrom/set-first boolean false
 #d-i apt-setup/services-select multiselect security, updates
 #d-i apt-setup/security_host string security.debian.org
 
+d-i apt-setup/use_mirror boolean true
+
 # Mirror settings
-d-i mirror/protocol string http
 d-i mirror/country string manual
 d-i mirror/http/hostname string cdn-fastly.deb.debian.org
 d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
-d-i apt-setup/use_mirror boolean true
+
 
 # User Configuration
 d-i passwd/root-login boolean false
