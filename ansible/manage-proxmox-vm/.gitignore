@@ -1,36 +1,23 @@
 # ---> Ansible
 *.retry
 
-# MacOS
-## Ignore desktop services files.
+# macOS
 **/.DS_Store
 
 # Certificates and Keys
-## Ignore certificates files.
 **/*.cer
 **/*.crt
 **/*.p7b
-## Ignore public key files
-**/*.pub
 
-# Variables
-## Ignore var file
-group_vars/all.yml
+# Secrets / Variables (use group_vars/main.yml.example as template)
+group_vars/main.yml
 
-# Inventory
-## Ignore inventory file
-**/*.ini
+# Inventory (real hosts — use hosts.ini.example as template)
 inventory/*.ini
 
 # Python
-## Ignore venv folder
-venv
+venv/
+__pycache__/
 
-# Extra Playbooks
-## Ignore Extra playbooks
-/production.yml
-/development.yml
-/testing.yml
-/staging.yml
-
-
+# Temporary files
+/tmp/

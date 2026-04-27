@@ -1,15 +1,12 @@
 ---
-- name: Create VM snapshot after configuration
-  vmware.vmware.vm_snapshot:
-    hostname: "{{ vcenter_hostname }}"
-    username: "{{ vcenter_username }}"
-    password: "{{ vcenter_password }}"
-    datacenter: "{{ vcenter_datacenter }}"
-    folder: "{{ vm_folder }}"
-    name: "{{ guest_hostname }}"
-    validate_certs: "{{ vcenter_validate_certs }}"
+- name: Create post-deployment VM snapshot
+  community.general.proxmox_snap:
+    api_host: "{{ proxmox_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    vmid: "{{ item.1.vmid_cloned }}"
+    snapname: "{{ snapshot_name | default('snapshot-' + lookup('pipe', 'date +%Y-%m-%d')) }}"
+    description: "Snapshot created by Ansible after deployment"
     state: present
-    snapshot_name: "{{ snapshot_name | default('Snapshot-' + lookup('pipe','date +%Y-%m-%d')) }}"
-    description: "Snapshot created by Ansible."
-    memory_dump: true
+  loop: "{{ vm_templates | subelements('vms') }}"
   delegate_to: localhost

@@ -6,14 +6,9 @@ proxmox_api_user: "root@pam"
 proxmox_api_password: "IXII123!"
 proxmox_storage: "vm-nvme1"
 
-# Cloud-Init / Ansible connection user
-# This user is created by cloud-init and used by Ansible to connect to the VM
-vm_connection_user: "ansible"
-vm_connection_ssh_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN5a4Aqkcvsmu4NQS7vj/fIRZ4E9ao8h5VUdcUaemCSU dragon@jumper"
-
-# Admin user created by the manage_users role
+# Linux VM User (injected via Cloud-Init and managed_users role)
 linux_user: "dragon"
-linux_user_password: "r"
+linux_user_password: "changeme"
 linux_ssh_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/pRNjhwdzA8X6Nk7KH/b4G5qHyHCCaEk0yKPO3+oFF jumper@dragon.local"
 
 # VM Defaults

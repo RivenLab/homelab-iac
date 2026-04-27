@@ -1,14 +1,42 @@
 ---
-- name: Deploy and Configure Linux VM
-  hosts: linux
+# Play 1 — Clone the VM via Proxmox API (runs on the Ansible controller)
+- name: Clone VM from Proxmox template
+  hosts: localhost
   gather_facts: false
   vars_files:
-    - ../group_vars/all.yml
+    - ../group_vars/main.yml
 
   roles:
     - role: proxmox_clone_linux
+
+  post_tasks:
+    - name: Add deployed VMs to dynamic inventory for Play 2
+      ansible.builtin.add_host:
+        name: "{{ item.1.network.ip.split('/')[0] }}"
+        groups: proxmox_deployed
+        ansible_user: "{{ linux_user }}"
+        ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file | default(omit) }}"
+      loop: "{{ vm_templates | subelements('vms') }}"
+
+# Play 2 — Configure the deployed VM over SSH (IP added dynamically above)
+- name: Configure Linux VM
+  hosts: proxmox_deployed
+  gather_facts: false
+  vars_files:
+    - ../group_vars/main.yml
+
+  roles:
     - linux_resize_disk
     - manage_users
+
+# Play 3 — Take a post-deployment snapshot via Proxmox API
+- name: Take Post-Deployment Snapshot
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../group_vars/main.yml
+
+  roles:
     - role: proxmox_snapshot
       vars:
         snapshot_name: "Post-Deployment Snapshot"

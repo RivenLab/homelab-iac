@@ -4,29 +4,11 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 # Debian 13 (Trixie) Preseed File
-# https://www.debian.org/releases/trixie/amd64/
+# https://www.debian.org/releases/bullseye/amd64/
 
 # Locale and Keyboard
 d-i debian-installer/locale string ${vm_os_language}
 d-i keyboard-configuration/xkb-keymap select ${vm_os_keyboard}
-
-# Network configuration
-${network}
-
-# To set a different link detection timeout (default is 3 seconds).
-# Values are interpreted as seconds.
-d-i netcfg/link_wait_timeout string 10
-
-# If you have a slow dhcp server and the installer times out waiting for
-# it, this might be useful.
-d-i netcfg/dhcp_timeout string 60
-d-i netcfg/dhcpv6_timeout string 60
-
-# Mirror settings
-d-i mirror/country string manual
-d-i mirror/http/hostname string cdn-fastly.deb.debian.org
-d-i mirror/http/directory string /debian
-d-i mirror/http/proxy string
 
 # Clock and Timezone
 d-i clock-setup/utc boolean true
@@ -40,26 +22,48 @@ d-i grub-installer/only_debian boolean true
 # Partitioning
 ${storage}
 
+# Network configuration
+${network}
+
 ### Apt setup
 # Choose, if you want to scan additional installation media
 # (default: false).
 d-i apt-setup/cdrom/set-first boolean false
+
 # You can choose to install non-free firmware.
 #d-i apt-setup/non-free-firmware boolean true
 # You can choose to install non-free and contrib software.
 #d-i apt-setup/non-free boolean true
 #d-i apt-setup/contrib boolean true
+
 # Uncomment the following line, if you don't want to have the sources.list
 # entry for a DVD/BD installation image active in the installed system
 # (entries for netinst or CD images will be disabled anyway, regardless of
 # this setting).
-d-i apt-setup/disable-cdrom-entries boolean true
-# Uncomment this if you don't want to use a network mirror.
-d-i apt-setup/use_mirror boolean true
+#d-i apt-setup/disable-cdrom-entries boolean true
+
 # Select which update services to use; define the mirrors to be used.
 # Values shown below are the normal defaults.
-d-i apt-setup/services-select multiselect security, updates
-d-i apt-setup/security_host string security.debian.org
+#d-i apt-setup/services-select multiselect security, updates
+#d-i apt-setup/security_host string security.debian.org
+
+#d-i apt-setup/use_mirror boolean true
+#d-i apt-setup/no_mirror boolean false
+
+
+
+# Mirror settings
+d-i mirror/country string manual
+d-i mirror/http/hostname string cdn-fastly.deb.debian.org
+d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
+
+# Turn CD Off
+d-i apt-setup/cdrom/set-first boolean false
+d-i apt-setup/cdrom/set-next boolean false
+d-i apt-setup/cdrom/set-failed boolean false
+
+d-i apt-setup/local0/repository string http://deb.debian.org/debian/ trixie main contrib non-free
 
 # User Configuration
 d-i passwd/root-login boolean false
@@ -71,11 +75,22 @@ d-i passwd/user-password-crypted password ${build_password_encrypted}
 d-i pkgsel/run_tasksel boolean false
 d-i pkgsel/include string openssh-server qemu-guest-agent python3-apt ${additional_packages}
 
+d-i pkgsel/upgrade select full-upgrade
+d-i pkgsel/update-policy select none
+d-i pkgsel/updatedb boolean true
+
 # You can choose, if your system will report back on what software you have
 # installed, and what software you use. The default is not to report back,
 # but sending reports helps the project determine what software is most
 # popular and should be included on the first CD/DVD.
 popularity-contest popularity-contest/participate boolean false
+
+
+d-i apt-setup/contrib boolean true
+d-i apt-setup/non-free boolean true
+d-i apt-setup/security_host string security.debian.org
+d-i apt-setup/services-select multiselect security, updates
+
 
 ### Boot loader installation
 # Grub is the boot loader (for x86).
@@ -88,12 +103,20 @@ d-i grub-installer/only_debian boolean true
 d-i finish-install/reboot_in_progress note
 
 # Post-install script
+#  - Add User to Sudoers
+#  - Remove lv_delete volume group
 d-i preseed/late_command string \
-    in-target sh -c "echo '${build_username} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/${build_username}"; \
-    in-target chmod 440 /etc/sudoers.d/${build_username}
+    echo '${build_username} ALL=(ALL) NOPASSWD: ALL' > /target/etc/sudoers.d/${build_username} ; \
+    in-target chmod 440 /etc/sudoers.d/${build_username} ;
+
+
+#    in-target chmod 440 /etc/sudoers.d/${build_username}%{ if length(lvm) != 0 ~} ; \
+#    lvremove -f /dev/%{ for volume_group in lvm ~}${volume_group.name}%{ endfor ~}/lv_delete > /dev/null 2>&1%{ endif }
 
 %{ if common_data_source == "disk" ~}
 # Umount preseed media early
 d-i preseed/early_command string \
-    umount /media && echo 1 > /sys/block/sr1/device/delete ;
+    umount /media || true ; \
+    echo 1 > /sys/block/sr1/device/delete || true ;
 %{ endif ~}
+

@@ -1,5 +1,5 @@
 ---
-proxmox_host: "10.80.80.2:8006"
-proxmox_node: "prx-cloud"
+proxmox_host: "10.10.10.101"
+proxmox_node: "prx2"
 proxmox_api_user: "root@pam"
-proxmox_api_password: ""
+proxmox_api_password: "IXII123!"

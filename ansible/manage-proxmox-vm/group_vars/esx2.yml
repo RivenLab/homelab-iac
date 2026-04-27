@@ -1,2 +1,0 @@
-vm_disk_datastore: "esxi2-datastore2"
-esxi_host: "esx2.dragon.local"

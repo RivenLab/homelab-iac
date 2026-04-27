@@ -7,7 +7,7 @@
 
   roles:
     - role: vmware_clone_linux
-    - vmware_resize_disk
+    - linux_resize_disk
     - manage_users
     - role: vmware_snapshot
       vars:

@@ -1,0 +1,10 @@
+---
+- name: Configure Linux VM
+  hosts: linux
+  gather_facts: false
+  vars_files:
+    - ../group_vars/main.yml
+
+  roles:
+    - linux_resize_disk
+    - manage_users

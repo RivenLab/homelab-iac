@@ -9,70 +9,101 @@
   delegate_to: localhost
 
 - name: Check if disk resize is needed
-  set_fact:
+  ansible.builtin.set_fact:
     resize_disk_enabled: "{{ disk_size_gb is defined and disk_size_gb | int > 0 }}"
 
 - name: Gather facts
   ansible.builtin.setup:
-  when: 
+  when:
     - resize_disk_enabled | default(false)
     - ansible_mounts is not defined
 
-- name: Get root filesystem info
-  set_fact:
+- name: Detect root disk device and partition number
+  become: true
+  ansible.builtin.shell: |
+    ROOT_DEV=$(findmnt -n -o SOURCE /)
+    if echo "$ROOT_DEV" | grep -q "mapper"; then
+      PV=$(pvs --noheadings -o pv_name 2>/dev/null | head -1 | tr -d ' ')
+      DISK=$(echo "$PV" | sed 's/p\?[0-9]*$//')
+      PART=$(echo "$PV" | grep -oP '\d+$')
+    else
+      DISK=$(echo "$ROOT_DEV" | sed 's/p\?[0-9]*$//')
+      PART=$(echo "$ROOT_DEV" | grep -oP '\d+$')
+    fi
+    echo "${DISK} ${PART}"
+  register: disk_info
+  changed_when: false
+  when: resize_disk_enabled | default(false)
+
+- name: Set root disk and partition facts
+  ansible.builtin.set_fact:
+    root_disk: "{{ disk_info.stdout.split()[0] }}"
+    root_part: "{{ disk_info.stdout.split()[1] }}"
     root_fs_device: "{{ (ansible_mounts | selectattr('mount', 'equalto', '/') | first).device }}"
     root_fs_fstype: "{{ (ansible_mounts | selectattr('mount', 'equalto', '/') | first).fstype }}"
   when: resize_disk_enabled | default(false)
 
 - name: Grow partition using growpart
   become: true
-  command: growpart /dev/sda 3
+  ansible.builtin.command: "growpart {{ root_disk }} {{ root_part }}"
   register: growpart_result
   failed_when:
     - growpart_result.rc != 0
-    - "'NOCHANGE' not in growpart_result.stdout + growpart_result.stderr | default('')"
-  changed_when: "'NOCHANGE' not in growpart_result.stdout + growpart_result.stderr | default('')"
+    - "'NOCHANGE' not in (growpart_result.stdout + growpart_result.stderr) | default('')"
+  changed_when: "'NOCHANGE' not in (growpart_result.stdout + growpart_result.stderr) | default('')"
   when: resize_disk_enabled | default(false)
 
-- name: Resize physical volume
+# All tasks below only run if growpart actually expanded the partition
+- name: Resize physical volume (LVM)
   become: true
-  command: pvresize /dev/sda3
+  ansible.builtin.command: "pvresize {{ root_disk }}{{ root_part }}"
   register: pvresize_result
   failed_when: pvresize_result.rc != 0
   changed_when: pvresize_result.rc == 0
-  when: resize_disk_enabled | default(false)
+  when:
+    - growpart_result.changed | default(false)
+    - root_fs_device is search('mapper')
 
-- name: Extend logical volume to use 100% of free space
+- name: Extend logical volume to use 100% free space (LVM)
   become: true
-  command: "lvextend -l +100%FREE {{ root_fs_device }}"
+  ansible.builtin.command: "lvextend -l +100%FREE {{ root_fs_device }}"
   register: lvextend_result
   failed_when:
     - lvextend_result.rc != 0
-    - "'New size matches existing size' not in lvextend_result.stdout + lvextend_result.stderr | default('')"
-  changed_when: "'New size matches existing size' not in lvextend_result.stdout + lvextend_result.stderr | default('')"
-  when: resize_disk_enabled | default(false)
+    - "'New size matches existing size' not in (lvextend_result.stdout + lvextend_result.stderr) | default('')"
+  changed_when: "'New size matches existing size' not in (lvextend_result.stdout + lvextend_result.stderr) | default('')"
+  when:
+    - growpart_result.changed | default(false)
+    - root_fs_device is search('mapper')
 
-- name: Resize the ext4/ext3 filesystem
+- name: Resize ext4/ext3 filesystem
   become: true
-  command: "resize2fs {{ root_fs_device }}"
+  ansible.builtin.command: "resize2fs {{ root_fs_device }}"
   register: resize2fs_result
   failed_when: resize2fs_result.rc != 0
   changed_when: resize2fs_result.rc == 0
-  when: 
-    - resize_disk_enabled | default(false)
+  when:
+    - growpart_result.changed | default(false)
     - root_fs_fstype in ['ext3', 'ext4']
 
-- name: Resize the xfs filesystem
+- name: Resize XFS filesystem
   become: true
-  command: "xfs_growfs /"
+  ansible.builtin.command: "xfs_growfs /"
   register: xfs_result
   failed_when: xfs_result.rc != 0
   changed_when: "'data blocks changed' in xfs_result.stdout | default('')"
-  when: 
-    - resize_disk_enabled | default(false)
+  when:
+    - growpart_result.changed | default(false)
     - root_fs_fstype == 'xfs'
 
+- name: Disk already at full size — nothing to do
+  ansible.builtin.debug:
+    msg: "Partition already at max size (growpart reported NOCHANGE) — skipping filesystem resize"
+  when:
+    - resize_disk_enabled | default(false)
+    - not (growpart_result.changed | default(false))
+
 - name: Skip disk resize message
-  debug:
-    msg: "Disk resize skipped - no size specified in inventory"
+  ansible.builtin.debug:
+    msg: "Disk resize skipped — disk_size_gb not specified"
   when: not (resize_disk_enabled | default(false))
