@@ -1,2 +1,0 @@
-[proxmox]
-10.80.80.2  ansible_user=root

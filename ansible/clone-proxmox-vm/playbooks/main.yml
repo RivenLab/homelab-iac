@@ -1,7 +1,0 @@
----
-- name: Deploy and Configure Linux VM
-  hosts: localhost
-  gather_facts: false
-
-  roles:
-    - proxmox_clone_linux
