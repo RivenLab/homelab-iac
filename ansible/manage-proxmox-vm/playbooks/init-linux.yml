@@ -5,6 +5,23 @@
   vars_files:
     - ../group_vars/main.yml
 
+  pre_tasks:
+    - name: Wait for SSH to be available
+      ansible.builtin.wait_for:
+        port: 22
+        host: "{{ ansible_host | default(inventory_hostname) }}"
+        search_regex: OpenSSH
+        timeout: 5
+      delegate_to: localhost
+      register: ssh_check
+      until: ssh_check is success
+      retries: 3
+      delay: 10
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
   roles:
+    - install_packages
     - linux_resize_disk
     - manage_users

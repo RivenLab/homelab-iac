@@ -1,0 +1,10 @@
+---
+- name: Install required packages
+  ansible.builtin.package:
+    name:
+      - qemu-guest-agent
+      - rsync
+      - curl
+      - wget
+    state: present
+  become: true
