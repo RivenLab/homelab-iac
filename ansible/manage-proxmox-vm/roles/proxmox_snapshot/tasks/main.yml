@@ -18,6 +18,7 @@
     vmid: "{{ item.1.vmid_cloned }}"
     snapname: "{{ computed_snapshot_name }}"
     description: "{{ snapshot_name | default('Snapshot created by Ansible after deployment') }}"
+    vmstate: true
     state: present
   loop: "{{ vm_templates | subelements('vms') }}"
   delegate_to: localhost
