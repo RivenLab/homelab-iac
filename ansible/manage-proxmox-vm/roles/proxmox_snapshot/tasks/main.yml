@@ -1,12 +1,23 @@
 ---
+# Proxmox snapshot names must match [A-Za-z0-9_-] only (no spaces) and be
+# unique per VM, so sanitize whatever was passed in and stamp it with the
+# time to avoid clashing with snapshots from earlier deployments.
+- name: Build a valid, unique snapshot name
+  ansible.builtin.set_fact:
+    computed_snapshot_name: >-
+      {{ (snapshot_name | default('snapshot'))
+         | regex_replace('[^A-Za-z0-9_-]+', '-')
+         | regex_replace('-+', '-')
+         | regex_replace('^-|-$', '') }}-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}
+
 - name: Create post-deployment VM snapshot
   community.general.proxmox_snap:
     api_host: "{{ proxmox_host }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password }}"
     vmid: "{{ item.1.vmid_cloned }}"
-    snapname: "{{ snapshot_name | default('snapshot-' + lookup('pipe', 'date +%Y-%m-%d')) }}"
-    description: "Snapshot created by Ansible after deployment"
+    snapname: "{{ computed_snapshot_name }}"
+    description: "{{ snapshot_name | default('Snapshot created by Ansible after deployment') }}"
     state: present
   loop: "{{ vm_templates | subelements('vms') }}"
   delegate_to: localhost

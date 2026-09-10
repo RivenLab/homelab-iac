@@ -1,4 +1,4 @@
-d-i netcfg/choose_interface select ${device}
+d-i netcfg/choose_interface select auto
 %{ if ip != null ~}
 d-i netcfg/disable_autoconfig boolean true
 d-i netcfg/get_ipaddress string ${ip}

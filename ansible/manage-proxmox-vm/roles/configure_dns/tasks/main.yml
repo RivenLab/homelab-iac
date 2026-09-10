@@ -1,0 +1,54 @@
+---
+# cloud-init writes dns-nameservers into /etc/network/interfaces.d/50-cloud-init,
+# but on these templates /etc/resolv.conf is managed by dhcpcd, which never
+# populates it for a statically-configured interface — leaving resolv.conf
+# empty and DNS broken. Write it directly and lock it so nothing overwrites it.
+
+- name: Skip DNS configuration message
+  ansible.builtin.debug:
+    msg: "dns_servers not specified — skipping /etc/resolv.conf configuration"
+  when: not (dns_servers is defined and dns_servers | length > 0)
+
+- name: Stat /etc/resolv.conf
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: resolv_stat
+  when: dns_servers is defined and dns_servers | length > 0
+
+- name: Drop immutable attribute so resolv.conf can be replaced
+  ansible.builtin.command: chattr -i /etc/resolv.conf
+  become: true
+  failed_when: false
+  changed_when: false
+  when:
+    - dns_servers is defined and dns_servers | length > 0
+    - resolv_stat.stat.exists
+
+- name: Remove /etc/resolv.conf if it is a symlink
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  become: true
+  when:
+    - dns_servers is defined and dns_servers | length > 0
+    - resolv_stat.stat.exists
+    - resolv_stat.stat.islnk | default(false)
+
+- name: Write static nameservers to /etc/resolv.conf
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {% for ns in dns_servers %}
+      nameserver {{ ns }}
+      {% endfor %}
+  become: true
+  when: dns_servers is defined and dns_servers | length > 0
+
+- name: Lock /etc/resolv.conf so nothing else can overwrite it
+  ansible.builtin.command: chattr +i /etc/resolv.conf
+  become: true
+  changed_when: false
+  when: dns_servers is defined and dns_servers | length > 0

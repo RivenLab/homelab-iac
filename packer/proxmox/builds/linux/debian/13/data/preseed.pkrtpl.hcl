@@ -24,7 +24,7 @@ d-i netcfg/dhcpv6_timeout string 60
 
 # Mirror settings
 d-i mirror/country string manual
-d-i mirror/http/hostname string cdn-fastly.deb.debian.org
+d-i mirror/http/hostname string http.us.debian.org
 d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
 
@@ -44,6 +44,8 @@ ${storage}
 # Choose, if you want to scan additional installation media
 # (default: false).
 d-i apt-setup/cdrom/set-first boolean false
+d-i apt-setup/cdrom/set-next boolean false
+d-i apt-setup/cdrom/set-failed boolean false
 # You can choose to install non-free firmware.
 #d-i apt-setup/non-free-firmware boolean true
 # You can choose to install non-free and contrib software.

@@ -73,10 +73,13 @@ echo "Creating VM..."
 
 # Generate temporary vars file
 VARS_FILE=$(mktemp /tmp/vm_vars.XXXXXX.yml)
-trap "rm -f $VARS_FILE" EXIT
+INIT_INVENTORY=$(mktemp /tmp/vm_inventory.XXXXXX.ini)
+trap "rm -f $VARS_FILE $INIT_INVENTORY" EXIT
 
 cat > "$VARS_FILE" <<EOF
 disk_size_gb: ${DISK_SIZE_GB}
+dns_servers:
+$(for dns in ${DNS_SERVERS//,/ }; do echo "  - \"$dns\""; done)
 vm_templates:
   - template: 'gemini'
     vms:
@@ -97,9 +100,22 @@ echo "Generated vars:"
 cat "$VARS_FILE"
 echo ""
 
-# Run Ansible
+# Run Ansible: clone the VM and wait for it to be reachable
 ansible-playbook playbooks/deploy_linux.yml \
   -i inventory/hosts.ini \
+  --extra-vars "@${VARS_FILE}"
+
+# Register the new VM under the "linux" group so init-linux.yml can target it
+VM_IP="${IP_ADDRESS%%/*}"
+cat > "$INIT_INVENTORY" <<EOF
+[linux]
+${VM_IP}
+EOF
+
+# Run Ansible: configure the VM and take the post-deployment snapshot
+ansible-playbook playbooks/init-linux.yml \
+  -i inventory/hosts.ini \
+  -i "$INIT_INVENTORY" \
   --extra-vars "@${VARS_FILE}"
 
 echo "Done."

@@ -32,22 +32,25 @@ locals {
       p.role == "pv" ? "100 1000 1000000000" : (p.size == -1 ? "100 1000 1000000" : "${p.size} ${p.size} ${p.size}"),
 
       # The "Type" string (4th column)
-      p.role == "pv" ? "$default_filesystem" : (p.role == "efi" ? "fat32" : p.filesystem.fstype),
+      p.role == "pv" ? "lvm" : (p.role == "efi" ? "fat32" : (p.role == "bios_grub" ? "free" : p.filesystem.fstype)),
 
       # Specifiers
       p.role == "pv" ? "$defaultignore{ }" : "",
       "$primary{ }",
+      p.role == "bios_grub" ? "$bios_boot{ }" : "",
       p.filesystem.mount == "/boot" ? "$bootable{ }" : "",
 
       # Method Logic
       p.role == "efi" ? "method{ efi } format{ }" : (
-        p.role == "pv" ? "method{ lvm } device{ /dev/${p.disk_device} } vg_name{ ${p.vg} }" : (
-          # Raw partitions (e.g., /boot)
-          join(" ", compact([
-            "method{ ${p.filesystem.fstype == "swap" ? "swap" : "format"} } format{ }",
-            p.filesystem.fstype != "swap" ? "use_filesystem{ } filesystem{ ${p.filesystem.fstype} }" : "",
-            p.filesystem.mount != "" ? "mountpoint{ ${p.filesystem.mount} }" : ""
-          ]))
+        p.role == "bios_grub" ? "method{ biosgrub }" : (
+          p.role == "pv" ? "method{ lvm } device{ /dev/${p.disk_device} } vg_name{ ${p.vg} }" : (
+            # Raw partitions (e.g., /boot)
+            join(" ", compact([
+              "method{ ${p.filesystem.fstype == "swap" ? "swap" : "format"} } format{ }",
+              p.filesystem.fstype != "swap" ? "use_filesystem{ } filesystem{ ${p.filesystem.fstype} }" : "",
+              p.filesystem.mount != "" ? "mountpoint{ ${p.filesystem.mount} }" : ""
+            ]))
+          )
         )
       ),
       "."

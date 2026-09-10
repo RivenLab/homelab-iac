@@ -7,8 +7,8 @@
 
 variable "vm_network_device" {
   type        = string
-  description = "The network device of the VM."
-  default     = "ens18"
+  description = "The network device of the VM. Unused: the preseed selects the interface via 'auto' since the predictable name depends on the hypervisor/NIC model."
+  default     = "auto"
 }
 
 variable "vm_ip_address" {

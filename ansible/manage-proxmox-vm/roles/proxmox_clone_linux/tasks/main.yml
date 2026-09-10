@@ -15,6 +15,19 @@
   loop: "{{ vm_templates | subelements('vms') }}"
   delegate_to: localhost
 
+- name: Resize primary disk to requested size
+  community.general.proxmox_disk:
+    api_host: "{{ proxmox_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    vmid: "{{ item.1.vmid_cloned }}"
+    disk: virtio0
+    size: "{{ disk_size_gb }}G"
+    state: resized
+  loop: "{{ vm_templates | subelements('vms') }}"
+  delegate_to: localhost
+  when: disk_size_gb is defined and disk_size_gb | int > 0
+
 - name: Configure Cloud-Init settings
   community.general.proxmox_kvm:
     api_host: "{{ proxmox_host }}"
@@ -46,3 +59,16 @@
     state: started
   loop: "{{ vm_templates | subelements('vms') }}"
   delegate_to: localhost
+
+- name: Wait for SSH to be available
+  ansible.builtin.wait_for:
+    port: 22
+    host: "{{ item.1.network.ip.split('/')[0] }}"
+    search_regex: OpenSSH
+    timeout: 5
+  loop: "{{ vm_templates | subelements('vms') }}"
+  delegate_to: localhost
+  register: ssh_check
+  until: ssh_check is success
+  retries: 30
+  delay: 10

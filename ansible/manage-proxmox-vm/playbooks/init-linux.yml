@@ -22,6 +22,19 @@
       ansible.builtin.setup:
 
   roles:
+    - configure_dns
     - install_packages
     - linux_resize_disk
     - manage_users
+
+# Take a post-deployment snapshot via Proxmox API, once configuration is done
+- name: Take Post-Deployment Snapshot
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../group_vars/main.yml
+
+  roles:
+    - role: proxmox_snapshot
+      vars:
+        snapshot_name: "Post-Deployment Snapshot"
