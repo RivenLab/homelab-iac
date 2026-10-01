@@ -48,6 +48,14 @@ DEFAULT_HOSTNAME="${VM_NAME}.dragon.local"
 read -p "Hostname (default ${DEFAULT_HOSTNAME}): " HOSTNAME
 HOSTNAME=${HOSTNAME:-$DEFAULT_HOSTNAME}
 
+read -p "Install Docker? (y/N): " INSTALL_DOCKER
+INSTALL_DOCKER=${INSTALL_DOCKER:-N}
+if [[ "$INSTALL_DOCKER" =~ ^[Yy]$ ]]; then
+  INSTALL_DOCKER_BOOL=true
+else
+  INSTALL_DOCKER_BOOL=false
+fi
+
 # Summary
 echo ""
 echo "--- VM Configuration Summary ---"
@@ -61,6 +69,7 @@ echo "IP Address:     $IP_ADDRESS"
 echo "Gateway:        $GATEWAY"
 echo "DNS Servers:    $DNS_SERVERS"
 echo "Hostname:       $HOSTNAME"
+echo "Install Docker: $INSTALL_DOCKER_BOOL"
 echo ""
 
 read -p "Confirm configuration? (y/N): " CONFIRM
@@ -78,6 +87,7 @@ trap "rm -f $VARS_FILE $INIT_INVENTORY" EXIT
 
 cat > "$VARS_FILE" <<EOF
 disk_size_gb: ${DISK_SIZE_GB}
+install_docker: ${INSTALL_DOCKER_BOOL}
 dns_servers:
 $(for dns in ${DNS_SERVERS//,/ }; do echo "  - \"$dns\""; done)
 vm_templates:

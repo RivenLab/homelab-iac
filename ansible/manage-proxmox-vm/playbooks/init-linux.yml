@@ -26,6 +26,8 @@
     - install_packages
     - linux_resize_disk
     - manage_users
+    - role: install_docker
+      when: install_docker | default(false) | bool
 
 # Take a post-deployment snapshot via Proxmox API, once configuration is done
 - name: Take Post-Deployment Snapshot
